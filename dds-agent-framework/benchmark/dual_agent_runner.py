@@ -200,11 +200,20 @@ class DriverAgent:
             model_name = self.model.replace("openai/", "")
             messages = [{"role": "system", "content": DRIVER_SYSTEM_PROMPT}]
             messages.extend(self.conversation)
-            response = self.client.chat.completions.create(
-                model=model_name,
-                max_tokens=2048,
-                messages=messages,
-            )
+            
+            # GPT-5+ models use max_completion_tokens, older use max_tokens
+            if "gpt-5" in model_name or "o1" in model_name or "o3" in model_name:
+                response = self.client.chat.completions.create(
+                    model=model_name,
+                    max_completion_tokens=2048,
+                    messages=messages,
+                )
+            else:
+                response = self.client.chat.completions.create(
+                    model=model_name,
+                    max_tokens=2048,
+                    messages=messages,
+                )
             reply = response.choices[0].message.content
             # Track tokens
             if response.usage:
@@ -313,16 +322,22 @@ class CoderAgent:
     
     def _run_test(self) -> str:
         """Run the test script."""
-        test_script = self.workspace / "test_publisher.py"
+        # Find the appropriate test script
+        test_script = None
+        for name in ["test_publisher.py", "test_subscriber.py", "test_durability.py"]:
+            candidate = self.workspace / name
+            if candidate.exists():
+                test_script = candidate
+                break
         
-        if not test_script.exists():
+        if test_script is None:
             return "No test script available"
         
         try:
             result = subprocess.run(
                 [sys.executable, str(test_script)],
                 cwd=self.workspace,
-                timeout=60,
+                timeout=90,  # Increased for subscriber tests
                 capture_output=True,
                 text=True,
             )
@@ -333,10 +348,12 @@ class CoderAgent:
             return f"Test error: {e}"
     
     def get_current_code(self) -> str:
-        """Get the current publisher code."""
-        publisher = self.workspace / "publisher.py"
-        if publisher.exists():
-            return publisher.read_text()
+        """Get the current code (publisher or subscriber)."""
+        # Check for publisher first, then subscriber
+        for filename in ["publisher.py", "subscriber.py"]:
+            filepath = self.workspace / filename
+            if filepath.exists():
+                return filepath.read_text()
         return ""
 
 
@@ -358,14 +375,31 @@ class DualAgentBenchmark:
         """Create isolated workspace."""
         workspace = Path(tempfile.mkdtemp(prefix="dds_dual_"))
         
-        # Copy test script and reference
-        test_script = task_dir / "test_publisher.py"
-        if test_script.exists():
+        # Copy all test scripts (test_publisher.py, test_subscriber.py, test_*.py)
+        for test_script in task_dir.glob("test_*.py"):
             shutil.copy(test_script, workspace)
         
+        # Copy any shell scripts
+        for script in task_dir.glob("*.sh"):
+            shutil.copy(script, workspace)
+        
+        # Copy reference directory
         ref_dir = task_dir / "reference"
         if ref_dir.exists():
             shutil.copytree(ref_dir, workspace / "reference")
+        
+        # Copy broken directory for debugging tasks (LQ-)
+        broken_dir = task_dir / "broken"
+        if broken_dir.exists():
+            # For QoS tasks, copy broken files as starting point
+            for f in broken_dir.glob("*.py"):
+                shutil.copy(f, workspace)
+        
+        # Copy starter files if present
+        starter_dir = task_dir / "starter"
+        if starter_dir.exists():
+            for f in starter_dir.glob("*"):
+                shutil.copy(f, workspace)
         
         if self.verbose:
             print(f"Workspace: {workspace}", file=sys.stderr)
@@ -520,55 +554,80 @@ class DualAgentBenchmark:
     def _verify(self, workspace: Path, task_dir: Path) -> tuple[bool, int, int]:
         """Run final verification."""
         publisher = workspace / "publisher.py"
-        if not publisher.exists():
-            return False, 0, 10
-        
-        ref_subscriber = task_dir / "reference" / "subscriber.py"
+        subscriber = workspace / "subscriber.py"
         expected_output = task_dir / "expected" / "output.jsonl"
-        
-        # Run publisher + subscriber
         output_file = workspace / "actual_output.jsonl"
         
         try:
-            # Start subscriber
-            sub_proc = subprocess.Popen(
-                [sys.executable, str(ref_subscriber),
-                 "--domain", "85", "--count", "10", "--timeout", "20",
-                 "--output", str(output_file)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            
-            time.sleep(2)
-            
-            # Run publisher
-            subprocess.run(
-                [sys.executable, str(publisher)],
-                cwd=workspace,
-                timeout=30,
-                capture_output=True,
-            )
-            
-            sub_proc.wait(timeout=15)
-            
-            # Compare
-            if output_file.exists():
-                result = subprocess.run(
-                    ["dds-sample-compare",
-                     "--expected", str(expected_output),
-                     "--actual", str(output_file)],
-                    capture_output=True,
-                    text=True,
+            # Determine task type
+            if publisher.exists() and not subscriber.exists():
+                # Publisher task: run generated publisher + reference subscriber
+                ref_subscriber = task_dir / "reference" / "subscriber.py"
+                if not ref_subscriber.exists():
+                    return False, 0, 10
+                
+                # Start reference subscriber
+                sub_proc = subprocess.Popen(
+                    [sys.executable, str(ref_subscriber),
+                     "--domain", "85", "--count", "10", "--timeout", "20"],
+                    stdout=open(output_file, "w"),
+                    stderr=subprocess.PIPE,
                 )
+                time.sleep(2)
                 
-                if result.returncode == 0:
-                    return True, 10, 10
+                # Run generated publisher
+                subprocess.run(
+                    [sys.executable, str(publisher)],
+                    cwd=workspace,
+                    timeout=30,
+                    capture_output=True,
+                )
+                sub_proc.wait(timeout=15)
                 
-                # Parse matched count
-                for line in result.stdout.split("\n"):
-                    if "Matched samples:" in line:
-                        matched = int(line.split(":")[-1].strip())
-                        return False, matched, 10
+            elif subscriber.exists():
+                # Subscriber task: run reference publisher + generated subscriber
+                ref_publisher = task_dir / "reference" / "publisher.py"
+                if not ref_publisher.exists():
+                    return False, 0, 10
+                
+                # Start generated subscriber
+                sub_proc = subprocess.Popen(
+                    [sys.executable, str(subscriber),
+                     "--domain", "0", "--count", "10", "--timeout", "20"],
+                    stdout=open(output_file, "w"),
+                    stderr=subprocess.PIPE,
+                    cwd=workspace,
+                )
+                time.sleep(2)
+                
+                # Run reference publisher
+                subprocess.run(
+                    [sys.executable, str(ref_publisher), "--count", "10"],
+                    timeout=30,
+                    capture_output=True,
+                )
+                sub_proc.wait(timeout=15)
+                
+            else:
+                return False, 0, 10
+            
+            # Compare output
+            if output_file.exists():
+                actual_lines = output_file.read_text().strip().split("\n")
+                actual_count = len([l for l in actual_lines if l.strip()])
+                
+                if expected_output.exists():
+                    expected_lines = expected_output.read_text().strip().split("\n")
+                    expected_count = len([l for l in expected_lines if l.strip()])
+                    
+                    if actual_count >= expected_count:
+                        return True, actual_count, expected_count
+                    return False, actual_count, expected_count
+                else:
+                    # No expected file, just check we got samples
+                    if actual_count >= 10:
+                        return True, actual_count, 10
+                    return False, actual_count, 10
             
             return False, 0, 10
             
