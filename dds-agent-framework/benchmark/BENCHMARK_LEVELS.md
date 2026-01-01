@@ -72,7 +72,49 @@ For each level:
 ### L5-PY-01: PCAP → MavLink → DDS Gateway (Future)
 - Based on real STANAG 4586 work
 - Task: Parse PCAP, extract MavLink, publish to DDS
-- This is the "pinnacle" test
+- This is one "pinnacle" test
+
+### L5-PY-02: Network Discovery → Build Subscriber (Future)
+
+**Concept**: Discover an unknown DDS system from network traffic and build a subscriber.
+
+**Difficulty Tiers**:
+
+**Tier A (L4)**: Use RTI DDS Spy
+- Given: Unknown publisher running on the network
+- Task: Use `rtiddsspy` to discover topic name and type
+- Build a subscriber that receives the data
+- Tools: rtiddsspy (universal subscriber)
+
+**Tier B (L5)**: Use Wireshark/tshark
+- Given: Unknown DDS traffic captured as PCAP
+- Task: Analyze RTPS protocol to discover:
+  - Participant GUIDs
+  - Topic names
+  - Type definitions (from TypeObject/TypeInformation)
+- Build subscriber that matches discovered type
+- Tools: tshark, Wireshark RTPS dissector
+
+**Tier C (L5+)**: Raw RTPS Analysis
+- Given: RTPS packet capture
+- Task: Parse RTPS protocol manually
+  - Decode submessages (DATA, HEARTBEAT, etc.)
+  - Extract serialized type information
+  - Reconstruct DynamicType from wire format
+- Build subscriber from scratch
+- Tools: RTI RTPS Analyzer (internal), custom parsing
+
+**Why This is Extreme**:
+1. Requires understanding RTPS protocol
+2. Type information may be encoded in TypeObject format
+3. Must handle partial discovery (not all info in every packet)
+4. Real-world scenario: debugging unknown DDS systems
+
+**Potential Tools to Provide**:
+- `dds-spy-wrapper` (already have)
+- `rtps-capture`: Wrapper around tshark with RTPS filtering
+- `rtps-type-extractor`: Extract TypeObject from PCAP
+- RTI RTPS Analyzer (if available)
 
 ---
 
@@ -512,4 +554,46 @@ Subscribers are often HARDER because:
 - [ ] LX-CPP-02: Python→C++ Subscriber
 - [x] LN-CPP-01: Native C++ Publisher
 - [ ] LN-CPP-02: Native C++ Subscriber
+
+### Phase 6: Extreme Tests (Future)
+- [ ] L5-PY-01: PCAP → MavLink → DDS Gateway
+- [ ] L5-PY-02a: Network Discovery via rtiddsspy
+- [ ] L5-PY-02b: Network Discovery via Wireshark
+- [ ] L5-PY-02c: Raw RTPS Protocol Analysis
+
+---
+
+## Future Tooling Needs
+
+For extreme tests, we may need additional tools:
+
+| Tool | Purpose | Status |
+|------|---------|--------|
+| `dds-spy-wrapper` | Universal subscriber | ✅ Implemented |
+| `rtps-capture` | Capture RTPS traffic via tshark | TODO |
+| `rtps-type-extractor` | Extract TypeObject from PCAP | TODO |
+| `rtps-dissector` | Parse RTPS submessages | TODO |
+| RTI RTPS Analyzer | Full RTPS analysis (RTI internal) | External |
+
+### Wireshark Integration
+
+Wireshark has built-in RTPS protocol dissection:
+
+```bash
+# Capture DDS traffic on port 7400-7500
+tshark -i en0 -f "udp portrange 7400-7500" -w dds_capture.pcap
+
+# Analyze RTPS traffic
+tshark -r dds_capture.pcap -Y "rtps" -T fields \
+  -e rtps.guid_prefix -e rtps.entity_id -e rtps.topic_name
+
+# Extract type information (if present)
+tshark -r dds_capture.pcap -Y "rtps.param.type_name" -T fields \
+  -e rtps.param.type_name
+```
+
+These tools would enable L5-level tests where models must:
+1. Capture/analyze network traffic
+2. Discover DDS entities and types
+3. Build compatible applications from wire format
 
