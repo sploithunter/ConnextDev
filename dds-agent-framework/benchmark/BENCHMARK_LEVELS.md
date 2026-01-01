@@ -168,6 +168,173 @@ Total: 12 tasks per language pair × (number of languages) = scalable test suite
 
 ---
 
+## QoS Challenge Tasks (LQ-)
+
+These tasks test DDS *understanding*, not just coding.
+They represent common real-world mistakes developers make.
+
+### Design Philosophy
+
+1. Give model a scenario with a subtle QoS problem
+2. Model must diagnose AND fix the issue
+3. Tests understanding of DDS semantics, not just API syntax
+
+---
+
+### LQ-01: Late Joiner Problem (Durability)
+
+**Scenario**: Publisher and subscriber start in undefined order.
+Sometimes subscriber starts first, sometimes publisher.
+Currently samples are being lost.
+
+**Given**:
+- Publisher using VOLATILE durability
+- Subscriber that sometimes misses samples
+
+**Task**: Fix the QoS so it works regardless of startup order
+
+**Solution**: Use TRANSIENT_LOCAL on both sides + RELIABLE
+
+**Why This Matters**: Extremely common production bug
+
+---
+
+### LQ-02: History Depth Overflow
+
+**Scenario**: Publisher sends 1000 samples/second.
+Subscriber processes at 100 samples/second.
+Samples are being dropped.
+
+**Given**:
+- Publisher with KEEP_LAST(10)
+- Slow subscriber
+
+**Task**: Configure QoS to prevent sample loss
+
+**Solution**: KEEP_ALL + RELIABLE, or increase depth + flow control
+
+---
+
+### LQ-03: QoS Mismatch Detection
+
+**Scenario**: Publisher and subscriber exist but no data flows.
+No errors shown.
+
+**Given**:
+- Publisher with RELIABLE
+- Subscriber with BEST_EFFORT
+- (Or other incompatible QoS combinations)
+
+**Task**: Diagnose and fix the incompatibility
+
+**Solution**: Match reliability policies; use QoS debugging
+
+---
+
+### LQ-04: Liveliness Timeout
+
+**Scenario**: Subscriber detects publisher as "dead" even though
+it's still running. Connection drops intermittently.
+
+**Given**:
+- Publisher with AUTOMATIC liveliness, 1 second lease
+- Subscriber checking liveliness
+- Publisher doing heavy computation (>1s between samples)
+
+**Task**: Fix the configuration to maintain connection
+
+**Solution**: Use MANUAL_BY_PARTICIPANT + assert_liveliness(), or increase lease
+
+---
+
+### LQ-05: Ownership Strength
+
+**Scenario**: Two publishers for the same topic (redundancy).
+Subscriber should only receive from the "primary".
+Currently receiving from both.
+
+**Given**:
+- Two publishers, same topic
+- Subscriber receiving duplicates
+
+**Task**: Configure ownership so only highest-strength publisher is used
+
+**Solution**: EXCLUSIVE ownership + ownership_strength QoS
+
+---
+
+### LQ-06: Content Filter Optimization
+
+**Scenario**: Subscriber only needs samples where `id > 100`.
+Currently receiving ALL samples and filtering in application.
+Network bandwidth is wasted.
+
+**Given**:
+- Publisher sending all samples
+- Subscriber filtering in code
+
+**Task**: Move filter to DDS level to reduce bandwidth
+
+**Solution**: ContentFilteredTopic with SQL expression
+
+---
+
+### LQ-07: Security Configuration
+
+**Scenario**: System requires encrypted DDS communication.
+Currently running without security.
+
+**Given**:
+- Working non-secure publisher/subscriber
+- Security governance/permissions files
+
+**Task**: Enable DDS Security with encryption
+
+**Solution**: Configure security plugins, governance, permissions
+
+---
+
+### LQ-08: Deadline Violation Handling
+
+**Scenario**: Publisher must send at least every 100ms.
+Subscriber must receive at least every 100ms.
+Need to detect and handle violations.
+
+**Given**:
+- Basic publisher/subscriber
+- Requirement for 100ms deadline
+
+**Task**: Configure deadline QoS and implement violation callbacks
+
+**Solution**: Set deadline QoS + on_offered_deadline_missed / on_requested_deadline_missed
+
+---
+
+### Expected Success Rates
+
+| Task | Difficulty | Expected Success |
+|------|------------|------------------|
+| LQ-01 (Durability) | L2 | 70-80% |
+| LQ-02 (History) | L2 | 60-70% |
+| LQ-03 (Mismatch) | L2 | 50-60% |
+| LQ-04 (Liveliness) | L3 | 40-50% |
+| LQ-05 (Ownership) | L3 | 30-40% |
+| LQ-06 (Filter) | L3 | 40-50% |
+| LQ-07 (Security) | L4 | 20-30% |
+| LQ-08 (Deadline) | L3 | 40-50% |
+
+---
+
+### Why QoS Challenges are Valuable
+
+1. **Real-world relevance**: These are actual production issues
+2. **Tests understanding**: Can't just copy-paste, must understand DDS
+3. **Configuration + Code**: Mix of QoS settings and callback implementation
+4. **Debugging skills**: Some require diagnosis before fixing
+5. **Stress test for models**: Configuration nuances challenge AI
+
+---
+
 ## Token/Iteration Limits
 
 To prevent runaway costs:
