@@ -63,6 +63,7 @@ class DualAgentConfig:
     driver_model: str  # Heavy model that directs
     coder_model: str   # Fast model that codes (via Aider)
     max_iterations: int = 20
+    max_tokens: int = 100000  # Token limit to prevent runaway costs
     timeout_seconds: int = 600
     verbose: bool = False
 
@@ -78,6 +79,9 @@ class DualAgentResult:
     total_iterations: int = 0
     driver_turns: int = 0
     coder_edits: int = 0
+    driver_tokens: int = 0  # Tokens used by driver
+    coder_tokens: int = 0   # Estimated tokens used by coder (from Aider)
+    total_tokens: int = 0   # Combined token usage
     time_seconds: float = 0.0
     samples_matched: int = 0
     samples_expected: int = 0
@@ -151,6 +155,7 @@ class DriverAgent:
         self.model = model
         self.verbose = verbose
         self.conversation = []
+        self.total_tokens_used = 0  # Track cumulative token usage
         self._setup_client()
     
     def _setup_client(self):
@@ -177,6 +182,7 @@ class DriverAgent:
     def _call_llm(self, prompt: str) -> str:
         """Call the driver model."""
         self.conversation.append({"role": "user", "content": prompt})
+        tokens_used = 0
         
         if self.provider == "anthropic":
             model_name = self.model.replace("anthropic/", "")
@@ -187,6 +193,9 @@ class DriverAgent:
                 messages=self.conversation,
             )
             reply = response.content[0].text
+            # Track tokens
+            tokens_used = response.usage.input_tokens + response.usage.output_tokens
+            
         elif self.provider == "openai":
             model_name = self.model.replace("openai/", "")
             messages = [{"role": "system", "content": DRIVER_SYSTEM_PROMPT}]
@@ -197,16 +206,23 @@ class DriverAgent:
                 messages=messages,
             )
             reply = response.choices[0].message.content
+            # Track tokens
+            if response.usage:
+                tokens_used = response.usage.prompt_tokens + response.usage.completion_tokens
+                
         elif self.provider == "google":
             # Gemini uses a different format
             full_prompt = f"{DRIVER_SYSTEM_PROMPT}\n\n{prompt}"
             response = self.client.generate_content(full_prompt)
             reply = response.text
+            # Estimate tokens for Google (no direct API)
+            tokens_used = len(full_prompt.split()) + len(reply.split())  # Rough estimate
         
+        self.total_tokens_used += tokens_used
         self.conversation.append({"role": "assistant", "content": reply})
         
         if self.verbose:
-            print(f"\n[DRIVER] {reply[:500]}...", file=sys.stderr)
+            print(f"\n[DRIVER] ({tokens_used} tokens) {reply[:500]}...", file=sys.stderr)
         
         return reply
     
@@ -245,6 +261,7 @@ class CoderAgent:
         self.workspace = workspace
         self.verbose = verbose
         self.edit_count = 0
+        self.estimated_tokens = 0  # Rough estimate based on Aider output
     
     def execute_instructions(self, instructions: str, timeout: int = 120) -> tuple[str, str]:
         """Execute instructions using Aider.
@@ -275,6 +292,14 @@ class CoderAgent:
             
             # Count edits
             self.edit_count += aider_output.count("Applied edit")
+            
+            # Estimate tokens (Aider may print "Tokens:" in output)
+            token_match = re.search(r"Tokens:\s*([\d,]+)", aider_output)
+            if token_match:
+                self.estimated_tokens += int(token_match.group(1).replace(",", ""))
+            else:
+                # Rough estimate: ~1.3 tokens per word
+                self.estimated_tokens += int(len(aider_output.split()) * 1.3)
             
         except subprocess.TimeoutExpired:
             aider_output = "Aider timed out"
@@ -427,12 +452,22 @@ class DualAgentBenchmark:
             if time.time() - start_time > config.timeout_seconds:
                 print("\n⚠ Timeout reached")
                 break
+            
+            # Check token limit
+            if driver.total_tokens_used > config.max_tokens:
+                print(f"\n⚠ Token limit reached ({driver.total_tokens_used:,}/{config.max_tokens:,})")
+                break
         
         elapsed = time.time() - start_time
         
         # Final verification
         print("\n[Final Verification]")
         success, matched, expected = self._verify(workspace, task_dir)
+        
+        # Calculate token usage
+        driver_tokens = driver.total_tokens_used
+        coder_tokens = coder.estimated_tokens  # Estimated from Aider output
+        total_tokens = driver_tokens + coder_tokens
         
         result = DualAgentResult(
             task_id=config.task_id,
@@ -443,6 +478,9 @@ class DualAgentBenchmark:
             total_iterations=iteration,
             driver_turns=len([c for c in conversation_log if c["role"] == "driver"]),
             coder_edits=coder.edit_count,
+            driver_tokens=driver_tokens,
+            coder_tokens=coder_tokens,
+            total_tokens=total_tokens,
             time_seconds=elapsed,
             samples_matched=matched,
             samples_expected=expected,
@@ -456,6 +494,7 @@ class DualAgentBenchmark:
         print(f"  Iterations: {iteration}")
         print(f"  Driver turns: {result.driver_turns}")
         print(f"  Coder edits: {coder.edit_count}")
+        print(f"  Tokens: {total_tokens:,} (driver: {driver_tokens:,}, coder: ~{coder_tokens:,})")
         print(f"  Samples: {matched}/{expected}")
         print(f"  Time: {elapsed:.1f}s")
         
@@ -575,6 +614,8 @@ def main():
                         help="Coder model (fast coding model for Aider)")
     parser.add_argument("--max-iterations", "-n", type=int, default=10,
                         help="Max iterations (default: 10)")
+    parser.add_argument("--max-tokens", type=int, default=100000,
+                        help="Max tokens before stopping (default: 100000)")
     parser.add_argument("--timeout", type=int, default=600,
                         help="Timeout in seconds (default: 600)")
     parser.add_argument("--verbose", "-v", action="store_true")
@@ -599,6 +640,7 @@ def main():
         driver_model=args.driver,
         coder_model=args.coder,
         max_iterations=args.max_iterations,
+        max_tokens=args.max_tokens,
         timeout_seconds=args.timeout,
         verbose=args.verbose,
     )
