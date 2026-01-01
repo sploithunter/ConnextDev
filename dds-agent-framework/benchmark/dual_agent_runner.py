@@ -277,6 +277,11 @@ class CoderAgent:
         
         Returns: (aider_output, test_results)
         """
+        # Find Python files in workspace to add to Aider
+        py_files = list(self.workspace.glob("*.py"))
+        # Exclude test files
+        py_files = [f for f in py_files if not f.name.startswith("test_")]
+        
         cmd = [
             "aider",
             "--model", self.model,
@@ -285,6 +290,10 @@ class CoderAgent:
             "--no-pretty",
             "--message", instructions,
         ]
+        
+        # Add Python files for Aider to edit
+        for f in py_files:
+            cmd.append(str(f.name))
         
         if self.verbose:
             print(f"\n[CODER] Running Aider with: {instructions[:200]}...", file=sys.stderr)
@@ -552,11 +561,14 @@ class DualAgentBenchmark:
         raise ValueError(f"Task {task_id} not found")
     
     def _verify(self, workspace: Path, task_dir: Path) -> tuple[bool, int, int]:
-        """Run final verification."""
+        """Run final verification with proper process management."""
         publisher = workspace / "publisher.py"
         subscriber = workspace / "subscriber.py"
         expected_output = task_dir / "expected" / "output.jsonl"
         output_file = workspace / "actual_output.jsonl"
+        
+        sub_proc = None
+        output_handle = None
         
         try:
             # Determine task type
@@ -566,52 +578,91 @@ class DualAgentBenchmark:
                 if not ref_subscriber.exists():
                     return False, 0, 10
                 
-                # Start reference subscriber
+                # Start reference subscriber FIRST
+                output_handle = open(output_file, "w")
                 sub_proc = subprocess.Popen(
                     [sys.executable, str(ref_subscriber),
-                     "--domain", "85", "--count", "10", "--timeout", "20"],
-                    stdout=open(output_file, "w"),
+                     "--domain", "85", "--count", "10", "--timeout", "30"],
+                    stdout=output_handle,
                     stderr=subprocess.PIPE,
                 )
-                time.sleep(2)
+                
+                # Wait for subscriber to be ready
+                time.sleep(3)
                 
                 # Run generated publisher
-                subprocess.run(
+                pub_result = subprocess.run(
                     [sys.executable, str(publisher)],
                     cwd=workspace,
-                    timeout=30,
+                    timeout=60,
                     capture_output=True,
                 )
-                sub_proc.wait(timeout=15)
+                
+                # Wait for subscriber to finish receiving
+                time.sleep(3)
+                
+                # Give subscriber time to complete
+                try:
+                    sub_proc.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    sub_proc.terminate()
+                    sub_proc.wait(timeout=5)
                 
             elif subscriber.exists():
-                # Subscriber task: run reference publisher + generated subscriber
+                # Subscriber task: run generated subscriber + reference publisher
                 ref_publisher = task_dir / "reference" / "publisher.py"
                 if not ref_publisher.exists():
                     return False, 0, 10
                 
-                # Start generated subscriber
+                # Start generated subscriber FIRST
+                output_handle = open(output_file, "w")
                 sub_proc = subprocess.Popen(
                     [sys.executable, str(subscriber),
-                     "--domain", "0", "--count", "10", "--timeout", "20"],
-                    stdout=open(output_file, "w"),
+                     "--count", "10", "--timeout", "30"],
+                    stdout=output_handle,
                     stderr=subprocess.PIPE,
                     cwd=workspace,
                 )
-                time.sleep(2)
+                
+                # Wait for subscriber to be ready (discovery)
+                time.sleep(3)
                 
                 # Run reference publisher
-                subprocess.run(
-                    [sys.executable, str(ref_publisher), "--count", "10"],
-                    timeout=30,
+                pub_result = subprocess.run(
+                    [sys.executable, str(ref_publisher), 
+                     "--count", "10", "--domain", "0"],
+                    cwd=task_dir / "reference",
+                    timeout=60,
                     capture_output=True,
                 )
-                sub_proc.wait(timeout=15)
+                
+                # Wait for reliable delivery
+                time.sleep(3)
+                
+                # Give subscriber time to complete
+                try:
+                    sub_proc.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    sub_proc.terminate()
+                    sub_proc.wait(timeout=5)
                 
             else:
                 return False, 0, 10
             
-            # Compare output
+        except Exception as e:
+            if self.verbose:
+                print(f"Verification process error: {e}", file=sys.stderr)
+            if sub_proc:
+                sub_proc.kill()
+            return False, 0, 10
+        finally:
+            if output_handle:
+                output_handle.close()
+            if sub_proc and sub_proc.poll() is None:
+                sub_proc.kill()
+        
+        # Compare output
+        try:
             if output_file.exists():
                 actual_lines = output_file.read_text().strip().split("\n")
                 actual_count = len([l for l in actual_lines if l.strip()])
@@ -633,7 +684,7 @@ class DualAgentBenchmark:
             
         except Exception as e:
             if self.verbose:
-                print(f"Verification error: {e}", file=sys.stderr)
+                print(f"Verification compare error: {e}", file=sys.stderr)
             return False, 0, 10
     
     def _save_result(self, result: DualAgentResult):
