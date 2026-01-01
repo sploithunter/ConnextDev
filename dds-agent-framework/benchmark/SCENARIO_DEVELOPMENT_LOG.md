@@ -14,6 +14,7 @@ This helps calibrate difficulty levels.
 | S7 | Large Data Model (439 fields from JSON Schema) | 1 | ~15min | L4-L5 |
 | S8 | Data Transformer (sub+pub, aggregation, unit conv) | 1 | ~10min | L3 |
 | S13 | Routing Service (Domain 0 → Domain 1, basic) | 2 | ~15min | L4 |
+| S14 | Type Extensibility (V1↔V2 compatibility) | 2 | ~10min | L3 |
 | | | | | |
 
 ---
@@ -225,6 +226,37 @@ Discover topics from raw network traffic.
 ## RTI Connext Infrastructure Services (Very Advanced)
 
 These are L5+ difficulty - challenging even for experienced developers.
+
+### S14: Type Extensibility ✅ (2 iterations)
+
+**Goal**: Extend a type without breaking existing pub/sub pairs.
+Classic real-world scenario for system evolution.
+
+**Result**: PASSED after 2 iterations
+**Files**: scenarios/S14_type_extensibility/reference/
+
+#### Test Matrix
+| Publisher | Subscriber | Result | Notes |
+|-----------|------------|--------|-------|
+| V1 (4 fields) | V1 | ✅ | Baseline |
+| V2 (8 fields) | V1 | ✅ | Backward compat (V1 ignores new fields) |
+| V2 (8 fields) | V2 | ✅ | Full extended data |
+| V1 (4 fields) | V2 | ✅ | Forward compat (defaults for new fields) |
+
+#### Iteration Log
+- Iteration 1: Created types.py, hit module name conflict with Python built-in ❌
+- Iteration 2: Renamed to sensor_types.py, all 4 tests passed ✅
+
+#### Key Concepts
+- MUTABLE extensibility allows adding fields
+- New fields appended to end of struct
+- V1 subscribers ignore unknown fields
+- V2 subscribers get defaults (0, 0.0, "") for missing fields
+- Same topic name, compatible types
+
+**Test for models**: Can they understand type versioning and create backward-compatible extensions?
+
+---
 
 ### S13: Routing Service ✅ (Basic - 2 iterations)
 
