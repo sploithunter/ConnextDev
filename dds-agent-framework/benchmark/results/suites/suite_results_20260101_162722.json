@@ -1,0 +1,21 @@
+{
+  "start_time": "2026-01-01T16:27:08.929204",
+  "end_time": "2026-01-01T16:27:22.283443",
+  "total_time_seconds": 13.354239,
+  "dev_mode": true,
+  "total_tasks": 1,
+  "passed": 0,
+  "failed": 1,
+  "pass_rate": "0.0%",
+  "total_cost_usd": 0.0011,
+  "total_tokens": 7622,
+  "results": [
+    {
+      "task": "L1-PY-01",
+      "model": "openai/gpt-4.1-nano / openai/gpt-4.1-nano",
+      "success": false,
+      "cost": 0.0011,
+      "time": 12.6
+    }
+  ]
+}
