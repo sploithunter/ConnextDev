@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+    QoS Profiles for Industrial Sensor Network
+    Phase 7: External QoS configuration
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="http://community.rti.com/schema/7.0.0/rti_dds_qos_profiles.xsd">
+    
+    <qos_library name="IndustrialSensorLibrary">
+        
+        <!-- Base profile for all sensor data -->
+        <qos_profile name="SensorDataProfile" is_default_qos="false">
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_LAST_HISTORY_QOS</kind>
+                    <depth>10</depth>
+                </history>
+            </datareader_qos>
+            
+            <datawriter_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_LAST_HISTORY_QOS</kind>
+                    <depth>10</depth>
+                </history>
+            </datawriter_qos>
+        </qos_profile>
+        
+        <!-- High-frequency sensor data -->
+        <qos_profile name="HighFrequencyProfile" base_name="SensorDataProfile">
+            <datareader_qos>
+                <history>
+                    <depth>100</depth>
+                </history>
+            </datareader_qos>
+            <datawriter_qos>
+                <history>
+                    <depth>100</depth>
+                </history>
+            </datawriter_qos>
+        </qos_profile>
+        
+        <!-- Alerts - critical, keep all -->
+        <qos_profile name="AlertProfile">
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+            </datareader_qos>
+            
+            <datawriter_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+            </datawriter_qos>
+        </qos_profile>
+        
+        <!-- Request/Reply - reliable, no durability needed -->
+        <qos_profile name="RequestReplyProfile">
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>VOLATILE_DURABILITY_QOS</kind>
+                </durability>
+            </datareader_qos>
+            
+            <datawriter_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>VOLATILE_DURABILITY_QOS</kind>
+                </durability>
+            </datawriter_qos>
+        </qos_profile>
+        
+        <!-- Data logger - keep all history -->
+        <qos_profile name="LoggerProfile">
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+                <resource_limits>
+                    <max_samples>10000</max_samples>
+                    <max_instances>100</max_instances>
+                    <max_samples_per_instance>1000</max_samples_per_instance>
+                </resource_limits>
+            </datareader_qos>
+        </qos_profile>
+        
+    </qos_library>
+    
+</dds>
+

@@ -15,6 +15,7 @@ This helps calibrate difficulty levels.
 | S8 | Data Transformer (sub+pub, aggregation, unit conv) | 1 | ~10min | L3 |
 | S13 | Routing Service (Domain 0 → Domain 1, basic) | 2 | ~15min | L4 |
 | S14 | Type Extensibility (V1↔V2 compatibility) | 2 | ~10min | L3 |
+| S15 | **Coherence Mega-Project** (8-phase industrial system) | 1 | ~20min | L5 |
 | | | | | |
 
 ---
@@ -226,6 +227,44 @@ Discover topics from raw network traffic.
 ## RTI Connext Infrastructure Services (Very Advanced)
 
 These are L5+ difficulty - challenging even for experienced developers.
+
+### S15: Coherence Mega-Project ✅ (1 iteration for reference)
+
+**Goal**: Test long-term coherence with 8-phase incremental project.
+This is a unique test for maintaining consistency across many files
+as the project grows in complexity.
+
+**Components**:
+1. sensor_publisher.py - Multi-sensor with config service
+2. aggregator.py - Rolling statistics
+3. alert_monitor.py - Anomaly detection
+4. data_logger.py - Historical logging
+5. config_client.py - Request/reply client
+6. types_v1.py / types_v2.py - Type definitions with extensibility
+7. qos_profiles.xml - External QoS configuration
+
+**8 Phases**:
+| Phase | Task | Key Concept |
+|-------|------|-------------|
+| 1 | Basic temp publisher | DynamicData, topics |
+| 2 | Add aggregator | Rolling windows, multi-topic |
+| 3 | Add alert monitor | Thresholds, alerts |
+| 4 | Add pressure sensor | Keyed instances |
+| 5 | Add config service | Request/reply pattern |
+| 6 | Add data logger | TRANSIENT_LOCAL, catch-up |
+| 7 | Externalize QoS | XML profiles |
+| 8 | Type extension | V1→V2 compatibility |
+
+**Why This Tests Coherence**:
+- Each phase builds on previous (can't skip)
+- Changes must not break existing components
+- Cross-file consistency required
+- Context retention over many iterations
+- Progressive complexity
+
+**Test Run**: 125 samples logged (40 temp + 40 pressure + 45 metrics)
+
+---
 
 ### S14: Type Extensibility ✅ (2 iterations)
 
