@@ -1,0 +1,35 @@
+# Hello World Test Configuration
+# This configuration tests a simple DDS publisher against expected output
+
+# Domain ID to use (optional, auto-selected if not specified)
+# domain_id: 99
+
+tests:
+  hello_world_basic:
+    description: "Basic Hello World publisher test - verify 10 samples"
+    publisher:
+      command: ["python", "examples/hello_world/publisher.py", "--domain", "{DOMAIN_ID}", "--count", "10", "--rate", "10"]
+      startup_delay: 2.0
+      timeout: 30.0
+    spy:
+      topics: "HelloWorld"
+      timeout: 15.0
+    validation:
+      expected_output: "examples/hello_world/expected_output.jsonl"
+      min_samples: 10
+      float_tolerance: 0.001
+
+  hello_world_fast:
+    description: "Fast Hello World publisher test - 5 samples at 50 Hz"
+    publisher:
+      command: ["python", "examples/hello_world/publisher.py", "--domain", "{DOMAIN_ID}", "--count", "5", "--rate", "50"]
+      startup_delay: 1.0
+      timeout: 10.0
+    spy:
+      topics: "HelloWorld"
+      timeout: 5.0
+    validation:
+      expected_output: "examples/hello_world/expected_5_samples.jsonl"
+      min_samples: 5
+      float_tolerance: 0.001
+

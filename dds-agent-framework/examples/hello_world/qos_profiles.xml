@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Hello World QoS Profile
+    
+    External QoS configuration for DDS applications.
+    Loaded via QosProvider.
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="http://community.rti.com/schema/current/rti_dds_qos_profiles.xsd">
+    
+    <!-- QoS Library -->
+    <qos_library name="HelloWorldLibrary">
+        
+        <!-- Default profile for Hello World applications -->
+        <qos_profile name="HelloWorldProfile" is_default_qos="true">
+            
+            <participant_qos>
+                <participant_name>
+                    <name>HelloWorld Participant</name>
+                </participant_name>
+            </participant_qos>
+            
+            <datawriter_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                    <max_blocking_time>
+                        <sec>1</sec>
+                        <nanosec>0</nanosec>
+                    </max_blocking_time>
+                </reliability>
+                <history>
+                    <kind>KEEP_LAST_HISTORY_QOS</kind>
+                    <depth>10</depth>
+                </history>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+            </datawriter_qos>
+            
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <history>
+                    <kind>KEEP_LAST_HISTORY_QOS</kind>
+                    <depth>10</depth>
+                </history>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+            </datareader_qos>
+            
+        </qos_profile>
+        
+        <!-- Best-effort profile for high-frequency data -->
+        <qos_profile name="BestEffortProfile">
+            <datawriter_qos>
+                <reliability>
+                    <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+                </reliability>
+                <history>
+                    <kind>KEEP_LAST_HISTORY_QOS</kind>
+                    <depth>1</depth>
+                </history>
+            </datawriter_qos>
+            
+            <datareader_qos>
+                <reliability>
+                    <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+                </reliability>
+                <history>
+                    <kind>KEEP_LAST_HISTORY_QOS</kind>
+                    <depth>1</depth>
+                </history>
+            </datareader_qos>
+        </qos_profile>
+        
+    </qos_library>
+    
+</dds>

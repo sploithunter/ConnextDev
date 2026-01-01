@@ -1,0 +1,44 @@
+# Vehicle Telemetry Test Configuration
+# Demonstrates multi-topic DDS pipeline testing
+
+name: "Vehicle Telemetry Pipeline Test"
+description: "Tests multi-topic publisher/subscriber with position, velocity, and status data"
+
+domain_id: 83
+
+phases:
+  # Phase 1: Publisher verification with DDS Spy
+  - name: "publisher_verification"
+    description: "Verify publisher sends correct samples using rtiddsspy"
+    publisher:
+      command: "python examples/vehicle_telemetry/publisher.py"
+      args: ["--domain", "83", "--count", "10", "--rate", "5"]
+      timeout: 15
+    spy:
+      topics: ["Vehicle_Position", "Vehicle_Velocity", "Vehicle_Status"]
+      timeout: 10
+    expected_counts:
+      Vehicle_Position: 10
+      Vehicle_Velocity: 10
+      Vehicle_Status: 2  # Published every 5th sample
+
+  # Phase 2: Full pipeline - publisher + subscriber
+  - name: "full_pipeline"
+    description: "Test publisher-to-subscriber communication"
+    publisher:
+      command: "python examples/vehicle_telemetry/publisher.py"
+      args: ["--domain", "83", "--count", "20", "--rate", "10"]
+      timeout: 15
+    subscriber:
+      command: "python examples/vehicle_telemetry/subscriber.py"
+      args: ["--domain", "83", "--timeout", "10", "--verbose"]
+      timeout: 15
+    expected_counts:
+      Vehicle_Position: 20
+      Vehicle_Velocity: 20
+      Vehicle_Status: 4
+
+comparison:
+  float_tolerance: 0.01
+  ignore_fields: ["timestamp", "sample_count"]
+
