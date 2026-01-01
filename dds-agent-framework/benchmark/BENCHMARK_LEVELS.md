@@ -436,6 +436,25 @@ Each unique key = separate instance with own lifecycle.
 
 ---
 
+### LD-07: Discovery GUID Mining ✅
+
+**Concept**: Discover GUIDs of remote entities using the API
+
+**Task A (L3)**: Subscriber gets Publisher's GUID
+- Use `sample.info.publication_handle`
+- Use `reader.matched_publication_data(handle)`
+- Relatively straightforward
+
+**Task B (L4)**: Publisher gets Subscriber's GUIDs
+- Subscribe to DCPSSubscription built-in topic
+- Filter for subscribers to your topic
+- Extract their GUIDs
+- Much harder - requires understanding of DDS discovery
+
+**Why Important**: Debugging, security, monitoring, failover detection
+
+---
+
 ## Task Balance Matrix
 
 Ensuring equal coverage of publishers and subscribers:
