@@ -76,6 +76,98 @@ For each level:
 
 ---
 
+## Cross-Language Tasks
+
+All cross-language tasks use Python as the "gold standard" reference.
+Verification is always: Does target language interoperate with Python?
+
+### Two Difficulty Tiers
+
+| Tier | Prefix | Given | Difficulty |
+|------|--------|-------|------------|
+| **Translation** | LX- | Python source code | L3 (40-60%) |
+| **Native** | LN- | Spec/requirements only | L4 (20-40%) |
+
+---
+
+## LX- Translation Tasks (L3)
+
+Model is given working Python code to translate.
+
+### LX-CPP-01: Python → C++ Publisher
+- Given: Python publisher source + Python subscriber for testing
+- Task: Translate to C++ Modern API
+- Create: publisher.cxx, HelloWorld.idl, CMakeLists.txt
+
+### LX-CPP-02: Python → C++ Subscriber  
+- Given: Python subscriber source + Python publisher for testing
+- Task: Translate to C++ with WaitSet/Listener
+- Key test: Async pattern correctly translated
+
+### LX-CS-01: Python → C# Publisher
+### LX-CS-02: Python → C# Subscriber
+### LX-JAVA-01: Python → Java Publisher
+### LX-JAVA-02: Python → Java Subscriber
+
+---
+
+## LN- Native Tasks (L4) - NO SOURCE CODE PROVIDED
+
+Model creates from scratch given only requirements.
+This tests true language + DDS expertise.
+
+### LN-CPP-01: Create C++ Publisher (No Python Source)
+- Given: Type spec, topic name, QoS requirements, Python subscriber for testing
+- NOT Given: Any source code to translate
+- Task: Create C++ publisher from scratch
+- Tests: C++ DDS API knowledge, build system, type definition
+
+### LN-CPP-02: Create C++ Subscriber (No Python Source)
+- Given: Type spec, Python publisher for testing
+- NOT Given: Source code
+- Task: Create C++ subscriber with async pattern
+
+### LN-CS-01: Create C# Publisher (No Source)
+### LN-CS-02: Create C# Subscriber (No Source)
+### LN-JAVA-01: Create Java Publisher (No Source)
+### LN-JAVA-02: Create Java Subscriber (No Source)
+
+---
+
+## Full Matrix
+
+| Language | Translation (LX) | Native (LN) |
+|----------|------------------|-------------|
+| C++ | LX-CPP-01, LX-CPP-02 | LN-CPP-01, LN-CPP-02 |
+| C# | LX-CS-01, LX-CS-02 | LN-CS-01, LN-CS-02 |
+| Java | LX-JAVA-01, LX-JAVA-02 | LN-JAVA-01, LN-JAVA-02 |
+
+Total: 12 tasks per language pair × (number of languages) = scalable test suite
+
+---
+
+## Expected Success Rates
+
+| Task Type | Expected Success |
+|-----------|------------------|
+| LX Publisher (translation) | 50-70% |
+| LX Subscriber (translation) | 40-60% |
+| LN Publisher (native) | 30-50% |
+| LN Subscriber (native) | 20-40% |
+
+---
+
+## Why This Architecture Works
+
+1. **Python is always the gold standard**: I create verified Python implementations
+2. **Deterministic verification**: Target language must interop with Python
+3. **Difficulty scaling**: Translation (easier) → Native (harder)
+4. **Minimal infrastructure**: One Python reference, many target language tests
+5. **Real-world relevant**: Cross-language DDS is common in production
+6. **Catches subtle bugs**: Type mismatches, QoS incompatibilities, endianness
+
+---
+
 ## Token/Iteration Limits
 
 To prevent runaway costs:
