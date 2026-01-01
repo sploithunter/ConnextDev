@@ -41,6 +41,19 @@ class TaskConfig:
 
 
 @dataclass
+class RubricScores:
+    """Rubric evaluation scores."""
+    prompt_following: int = 0
+    code_style: int = 0
+    correctness: int = 0
+    dds_best_practices: int = 0
+    error_handling: int = 0
+    overall: float = 0.0
+    max_score: int = 25
+    summary: str = ""
+
+
+@dataclass
 class BenchmarkResult:
     """Result of a benchmark run."""
     task_id: str
@@ -54,14 +67,32 @@ class BenchmarkResult:
     checkpoints: dict = field(default_factory=dict)
     error_log: str = ""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    # Rubric evaluation (optional)
+    rubric_scores: Optional[RubricScores] = None
+    rubric_evaluator: str = ""
+    generated_code: str = ""
 
 
 class BenchmarkRunner:
     """Runs DDS benchmark tasks against AI models."""
     
-    def __init__(self, benchmark_dir: Path, verbose: bool = False):
+    # Models to use for rubric evaluation
+    RUBRIC_EVALUATORS = [
+        "anthropic/claude-opus-4-5",
+        "openai/gpt-5.2",
+    ]
+    
+    def __init__(
+        self,
+        benchmark_dir: Path,
+        verbose: bool = False,
+        run_rubric: bool = False,
+        rubric_evaluator: str = "anthropic/claude-opus-4-5",
+    ):
         self.benchmark_dir = benchmark_dir
         self.verbose = verbose
+        self.run_rubric = run_rubric
+        self.rubric_evaluator = rubric_evaluator
         self.config = self._load_config()
         
     def _load_config(self) -> dict:
@@ -332,6 +363,11 @@ class BenchmarkRunner:
         
         elapsed = time.time() - start_time
         
+        # Read generated code for rubric evaluation
+        generated_code = ""
+        if publisher_file.exists():
+            generated_code = publisher_file.read_text()
+        
         result = BenchmarkResult(
             task_id=task_id,
             model=model,
@@ -342,7 +378,22 @@ class BenchmarkRunner:
             samples_matched=matched,
             samples_expected=expected,
             error_log=error_log,
+            generated_code=generated_code,
         )
+        
+        # Run rubric evaluation if enabled
+        if self.run_rubric and generated_code:
+            print(f"\nPhase 3: Rubric Evaluation ({self.rubric_evaluator})")
+            rubric_scores = self._run_rubric_evaluation(generated_code, task)
+            if rubric_scores:
+                result.rubric_scores = rubric_scores
+                result.rubric_evaluator = self.rubric_evaluator
+                print(f"  Rubric Score: {rubric_scores.overall}/{rubric_scores.max_score} ({rubric_scores.overall/rubric_scores.max_score*100:.0f}%)")
+                print(f"    Prompt Following: {rubric_scores.prompt_following}/5")
+                print(f"    Code Style: {rubric_scores.code_style}/5")
+                print(f"    Correctness: {rubric_scores.correctness}/5")
+                print(f"    DDS Best Practices: {rubric_scores.dds_best_practices}/5")
+                print(f"    Error Handling: {rubric_scores.error_handling}/5")
         
         # Print result
         status = "✓ PASSED" if verify_success else "✗ FAILED"
@@ -362,6 +413,60 @@ class BenchmarkRunner:
         
         return result
     
+    def _run_rubric_evaluation(
+        self,
+        code: str,
+        task: TaskConfig,
+    ) -> Optional[RubricScores]:
+        """Run rubric evaluation on generated code.
+        
+        Returns RubricScores or None if evaluation fails.
+        """
+        try:
+            # Import from same directory
+            import sys
+            sys.path.insert(0, str(self.benchmark_dir))
+            from rubric_evaluator import RubricEvaluator
+            
+            evaluator = RubricEvaluator(self.rubric_evaluator)
+            
+            with open(task.prompt_file) as f:
+                task_prompt = f.read()
+            
+            task_type = "publisher" if "publisher" in task.name.lower() else "subscriber"
+            
+            evaluation = evaluator.evaluate(
+                code=code,
+                task_prompt=task_prompt,
+                task_type=task_type,
+                task_id=task.task_id,
+            )
+            
+            # Convert to RubricScores
+            scores = RubricScores(summary=evaluation.summary)
+            scores.overall = evaluation.overall_score
+            scores.max_score = int(evaluation.max_overall)
+            
+            for s in evaluation.scores:
+                dim = s.dimension.lower().replace(" ", "_")
+                if "prompt" in dim:
+                    scores.prompt_following = s.score
+                elif "style" in dim:
+                    scores.code_style = s.score
+                elif "correct" in dim:
+                    scores.correctness = s.score
+                elif "dds" in dim or "practice" in dim:
+                    scores.dds_best_practices = s.score
+                elif "error" in dim:
+                    scores.error_handling = s.score
+            
+            return scores
+            
+        except Exception as e:
+            if self.verbose:
+                print(f"Rubric evaluation failed: {e}", file=sys.stderr)
+            return None
+    
     def _save_result(self, result: BenchmarkResult, workspace: Path):
         """Save benchmark result to results directory."""
         results_dir = self.benchmark_dir / "results" / result.model
@@ -369,8 +474,36 @@ class BenchmarkRunner:
         
         result_file = results_dir / f"{result.task_id}_{result.timestamp.replace(':', '-')}.json"
         
+        # Convert result to dict, handling Optional fields
+        result_dict = {
+            "task_id": result.task_id,
+            "model": result.model,
+            "success": result.success,
+            "reason": result.reason,
+            "time_seconds": result.time_seconds,
+            "aider_iterations": result.aider_iterations,
+            "samples_matched": result.samples_matched,
+            "samples_expected": result.samples_expected,
+            "checkpoints": result.checkpoints,
+            "error_log": result.error_log,
+            "timestamp": result.timestamp,
+            "rubric_evaluator": result.rubric_evaluator,
+        }
+        
+        if result.rubric_scores:
+            result_dict["rubric_scores"] = {
+                "prompt_following": result.rubric_scores.prompt_following,
+                "code_style": result.rubric_scores.code_style,
+                "correctness": result.rubric_scores.correctness,
+                "dds_best_practices": result.rubric_scores.dds_best_practices,
+                "error_handling": result.rubric_scores.error_handling,
+                "overall": result.rubric_scores.overall,
+                "max_score": result.rubric_scores.max_score,
+                "summary": result.rubric_scores.summary,
+            }
+        
         with open(result_file, "w") as f:
-            json.dump(result.__dict__, f, indent=2)
+            json.dump(result_dict, f, indent=2)
         
         if self.verbose:
             print(f"Result saved: {result_file}", file=sys.stderr)
@@ -381,11 +514,16 @@ def main():
     parser.add_argument("--task", "-t", required=True,
                         help="Task ID (e.g., L1-PY-01)")
     parser.add_argument("--model", "-m", required=True,
-                        help="Model name (e.g., gpt-4o, claude-sonnet-4-20250514)")
+                        help="Model name (e.g., openai/gpt-5.2, anthropic/claude-opus-4-5)")
     parser.add_argument("--benchmark-dir", "-d", default=None,
                         help="Benchmark directory (default: auto-detect)")
     parser.add_argument("--verbose", "-v", action="store_true",
                         help="Verbose output")
+    parser.add_argument("--rubric", "-r", action="store_true",
+                        help="Run rubric evaluation on generated code")
+    parser.add_argument("--rubric-evaluator", "-e", 
+                        default="anthropic/claude-opus-4-5",
+                        help="Model to use for rubric evaluation")
     
     args = parser.parse_args()
     
@@ -406,7 +544,12 @@ def main():
             print("ERROR: Could not find benchmark directory", file=sys.stderr)
             sys.exit(1)
     
-    runner = BenchmarkRunner(benchmark_dir, verbose=args.verbose)
+    runner = BenchmarkRunner(
+        benchmark_dir,
+        verbose=args.verbose,
+        run_rubric=args.rubric,
+        rubric_evaluator=args.rubric_evaluator,
+    )
     result = runner.run_benchmark(args.task, args.model)
     
     sys.exit(0 if result.success else 1)
