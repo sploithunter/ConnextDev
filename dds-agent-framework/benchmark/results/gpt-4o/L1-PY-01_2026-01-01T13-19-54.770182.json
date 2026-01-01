@@ -1,0 +1,13 @@
+{
+  "task_id": "L1-PY-01",
+  "model": "gpt-4o",
+  "success": false,
+  "reason": "Matched 0/10",
+  "time_seconds": 22.855576753616333,
+  "aider_iterations": 1,
+  "samples_matched": 0,
+  "samples_expected": 10,
+  "checkpoints": {},
+  "error_log": "Publisher failed: Traceback (most recent call last):\n  File \"/var/folders/lc/85kswttn5yb03wwfxzkpqtjw0000gp/T/dds_bench_L1-PY-01_nqjacici/publisher.py\", line 43, in <module>\n    main()\n  File \"/var/folders/lc/85kswttn5yb03wwfxzkpqtjw0000gp/T/dds_bench_L1-PY-01_nqjacici/publisher.py\", line 16, in main\n    participant.register_type(hello_world_type)\nTypeError: register_type(): incompatible function arguments. The following argument types are supported:\n    1. (self: rti.connextdds.DomainParticipant, name: str, type: rti.connextdds.DynamicType, serialization_property: rti.connextdds.DynamicDataTypeSerializationProperty = DynamicDataTypeSerializationProperty.DEFAULT) -> None\n\nInvoked with: <rti.connextdds.DomainParticipant object at 0x1013f3b30>, <rti.connextdds.StructType object at 0x1014d52f0>\n",
+  "timestamp": "2026-01-01T13:19:54.770182"
+}

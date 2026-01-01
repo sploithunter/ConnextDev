@@ -1,0 +1,13 @@
+{
+  "task_id": "L1-PY-01",
+  "model": "gpt-4o",
+  "success": false,
+  "reason": "Matched 0/10",
+  "time_seconds": 21.766963958740234,
+  "aider_iterations": 1,
+  "samples_matched": 0,
+  "samples_expected": 10,
+  "checkpoints": {},
+  "error_log": "\u2717 FAILED\n\nActual samples:   0\nExpected samples: 10\nMatched samples:  0\n\nMismatches: 11\n\n    Sample count mismatch: 0 actual vs 10 expected\n\n  Sample 0:\n    Missing sample 0 in actual output\n\n  Sample 1:\n    Missing sample 1 in actual output\n\n  Sample 2:\n    Missing sample 2 in actual output\n\n  Sample 3:\n    Missing sample 3 in actual output\n\n  Sample 4:\n    Missing sample 4 in actual output\n\n  Sample 5:\n    Missing sample 5 in actual output\n\n  Sample 6:\n    Missing sample 6 in actual output\n\n  Sample 7:\n    Missing sample 7 in actual output\n\n  Sample 8:\n    Missing sample 8 in actual output\n  ... and 1 more\n",
+  "timestamp": "2026-01-01T13:18:51.367450"
+}

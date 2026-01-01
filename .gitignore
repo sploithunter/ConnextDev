@@ -48,3 +48,4 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
+.aider*

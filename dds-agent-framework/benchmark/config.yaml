@@ -1,0 +1,119 @@
+# DDS Benchmark Harness Configuration
+# Evaluates AI models on DDS programming tasks
+
+harness:
+  name: "DDS Agent Benchmark"
+  version: "1.0.0"
+  
+  # Default timeouts (can be overridden per-task)
+  default_timeout_seconds: 300  # 5 minutes
+  max_iterations: 50
+  
+  # Workspace for benchmark runs
+  workspace_base: "./benchmark_runs"
+
+# Models to benchmark (2025 state-of-the-art)
+# Model strings are aider-compatible
+models:
+  # OpenAI - GPT-5.2 series (Dec 2025)
+  - name: "openai/gpt-5.2"
+    provider: "openai"
+    enabled: true
+    tier: "flagship"
+    
+  - name: "openai/gpt-5.1"
+    provider: "openai"
+    enabled: true
+    tier: "flagship"
+    
+  - name: "openai/gpt-4.1"
+    provider: "openai"
+    enabled: true
+    tier: "mid"
+    
+  - name: "openai/o4-mini"
+    provider: "openai"
+    enabled: true
+    tier: "reasoning"
+    
+  # Anthropic - Claude 4 series (2025)
+  - name: "anthropic/claude-opus-4-5"
+    provider: "anthropic"
+    enabled: true
+    tier: "flagship"
+    
+  - name: "anthropic/claude-sonnet-4-5"
+    provider: "anthropic"
+    enabled: true
+    tier: "mid"
+    
+  - name: "anthropic/claude-haiku-4-5"
+    provider: "anthropic"
+    enabled: true
+    tier: "fast"
+    
+  # Google - Gemini 2.5/3 series (2025)
+  - name: "gemini-2.5-pro"
+    provider: "google"
+    enabled: true
+    tier: "flagship"
+    
+  - name: "gemini-3-pro-preview"
+    provider: "google"
+    enabled: false  # Preview, may be unstable
+    tier: "flagship"
+    
+  - name: "gemini-2.5-flash"
+    provider: "google"
+    enabled: true
+    tier: "fast"
+    
+  # xAI - Grok 4 series (Jul 2025)
+  - name: "xai/grok-4"
+    provider: "xai"
+    enabled: true
+    tier: "flagship"
+    
+  - name: "xai/grok-3"
+    provider: "xai"
+    enabled: true
+    tier: "mid"
+
+# Task levels
+levels:
+  1:
+    name: "Foundational"
+    description: "Basic DDS publisher/subscriber - expected success >95%"
+    tasks:
+      - "L1-PY-01_hello_publisher"
+      
+  2:
+    name: "Intermediate"
+    description: "Multi-topic, QoS configuration - expected success 80-90%"
+    tasks: []  # To be added
+    
+  3:
+    name: "Advanced"
+    description: "Nested structs, protocol adapters - expected success 50-70%"
+    tasks: []
+
+# Verification settings
+verification:
+  float_tolerance: 0.0001
+  ignore_fields:
+    - "timestamp"
+    - "sample_count"
+  
+# DDS environment
+dds:
+  domain_id_range: [80, 99]  # Safe range for benchmarks
+  discovery_timeout: 5.0
+
+# Metrics to capture
+metrics:
+  - time_to_completion
+  - iteration_count
+  - token_usage
+  - checkpoints_passed
+  - final_result
+
