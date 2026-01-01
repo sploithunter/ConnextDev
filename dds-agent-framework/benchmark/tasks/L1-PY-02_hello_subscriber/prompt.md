@@ -89,6 +89,31 @@ python subscriber.py --count 10 --timeout 30
 - `--count`: Number of samples to receive (default: 10)
 - `--timeout`: Max seconds to wait (default: 30)
 
+## Tools to Help You Succeed
+
+### `dds-spy-wrapper` - Verify Publisher is Sending
+
+Before debugging your subscriber, verify the publisher is actually sending data:
+
+```bash
+# Terminal 1: Run the reference publisher
+python reference/publisher.py --count 10
+
+# Terminal 2: Verify data is on the wire
+dds-spy-wrapper --domain 0 --duration 15
+```
+
+If spy shows samples → Publisher works, issue is in your subscriber
+If spy shows nothing → Check domain ID, topic name
+
+### Debugging Tip
+
+If your subscriber isn't receiving:
+1. First verify with `dds-spy-wrapper` that data is on the wire
+2. Check QoS compatibility (both sides should match)
+3. Check type definition matches exactly
+4. Ensure you're using async pattern (WaitSet), not polling
+
 ## Test Your Code
 
 After writing `subscriber.py`, run:
@@ -100,9 +125,10 @@ python test_subscriber.py
 This will:
 1. Check syntax
 2. Verify imports work
-3. Start the reference publisher
-4. Run your subscriber
-5. Verify output matches expected JSONL
+3. Check for async pattern (WaitSet/Listener)
+4. Start the reference publisher
+5. Run your subscriber
+6. Verify output matches expected JSONL
 
 ## Remember
 

@@ -91,6 +91,32 @@ writer.write(sample)
 
 **DO NOT USE**: `dds.Topic`, `dds.DataWriter`, or `DynamicDataTypeSupport` - these are wrong patterns.
 
+## Tools to Help You Succeed
+
+### `dds-spy-wrapper` - Universal Subscriber (Use This!)
+
+Before the automated test runs, you can verify your publisher manually:
+
+```bash
+# Terminal 1: Run your publisher
+python publisher.py
+
+# Terminal 2: Verify with spy (no type definition needed!)
+dds-spy-wrapper --domain 85 --duration 15
+```
+
+If the spy shows your samples → publisher is working!
+If the spy shows nothing → debug your publisher first.
+
+**The spy is a universal subscriber** - it can see ANY DDS data without needing
+to know the type definition ahead of time. Use it to verify your code works!
+
+### `dds-sample-compare` - Output Comparison
+
+```bash
+dds-sample-compare --actual output.jsonl --expected expected.jsonl
+```
+
 ## Verification
 
 Your publisher will be tested by:

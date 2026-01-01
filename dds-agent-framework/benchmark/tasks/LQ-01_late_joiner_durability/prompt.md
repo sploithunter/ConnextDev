@@ -63,6 +63,30 @@ Think about:
 | TRANSIENT | Data survives writer restart (external storage) |
 | PERSISTENT | Data survives system restart |
 
+## Tools to Help You Debug
+
+### `dds-spy-wrapper` - Verify Data Flow
+
+Use the spy to understand what's happening:
+
+```bash
+# Terminal 1: Run publisher
+python publisher.py --count 10
+
+# Terminal 2: Watch with spy
+dds-spy-wrapper --domain 0 --duration 30
+```
+
+**Key insight**: The spy uses VOLATILE durability by default.
+If you start the spy AFTER the publisher finishes, and see NO samples,
+that demonstrates the late joiner problem you need to fix!
+
+Try this experiment:
+1. Start spy first, then publisher → spy sees data
+2. Start publisher first, then spy → spy sees nothing (with VOLATILE)
+
+Your fix should make #2 work too (using durability).
+
 ## Testing
 
 The test runs 5 times with random startup delays:
