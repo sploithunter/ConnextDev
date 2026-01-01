@@ -14,7 +14,7 @@ For each level:
 - Reference: Subscriber provided
 - Verification: Subscriber captures JSONL, compare with expected
 
-### L1-PY-02: Hello World Subscriber (TODO)
+### L1-PY-02: Hello World Subscriber ✅
 - Task: Create subscriber using async callbacks
 - Reference: Publisher provided
 - Verification: Subscriber outputs JSONL, compare with expected
@@ -351,9 +351,146 @@ If a model hits limits without success → FAILED (resource exhausted)
 
 ---
 
-## Next Implementation Priority
+## Advanced DDS Concepts (LD- Tasks)
 
-1. **L1-PY-02**: Subscriber task (tests async callback requirement)
-2. **L3-PY-01**: Binary → DDS (first "real" adapter task)
-3. **L3-PY-03**: Full loop (complete pipeline)
+These tasks test specific DDS features and patterns.
+
+### LD-01: Content Filtered Topic (Subscriber)
+
+**Concept**: Subscriber only receives samples matching a filter expression.
+Filter is evaluated on the publisher side (saves bandwidth).
+
+**Task**: Create subscriber with ContentFilteredTopic
+- Filter: `id > 100 AND status = 'ACTIVE'`
+- Verify only matching samples received
+
+**Why Harder**: Requires understanding of SQL filter syntax, CFT creation
+
+---
+
+### LD-02: Dynamic Data vs IDL-Generated Types
+
+**Concept**: Compare two approaches:
+- DynamicData: Runtime type definition (what we've been using)
+- IDL-generated: Compile-time types via rtiddsgen
+
+**Task A (Dynamic)**: Create pub/sub using DynamicData
+**Task B (IDL)**: Create pub/sub using rtiddsgen + generated code
+
+**Why Important**: Real projects often use IDL for performance
+
+---
+
+### LD-03: RTI DDS Gen Workflow
+
+**Concept**: Full rtiddsgen workflow from IDL to working code
+
+**Task**:
+1. Write HelloWorld.idl
+2. Run: `rtiddsgen -language python -d gen HelloWorld.idl`
+3. Create publisher using generated types
+4. Create subscriber using generated types
+
+**Why Harder**: Multi-step workflow, understanding generated code structure
+
+---
+
+### LD-04: Instance Lifecycle (Keyed Topics)
+
+**Concept**: DDS instances identified by key fields.
+Each unique key = separate instance with own lifecycle.
+
+**Task**: Create keyed topic publisher/subscriber
+- Key field: `sensor_id`
+- Handle: register_instance, dispose, unregister
+- Subscriber must track instance state
+
+**Why Harder**: Instance management is complex but critical for real systems
+
+---
+
+### LD-05: Request-Reply Pattern
+
+**Concept**: Synchronous request-reply over DDS (not just pub-sub)
+
+**Task**: Implement simple calculator service
+- Request: `{operation: "add", a: 5, b: 3}`
+- Reply: `{result: 8}`
+- Use correlation IDs
+
+**Why Harder**: Bidirectional, correlation, timeouts
+
+---
+
+### LD-06: Waitset with Multiple Conditions
+
+**Concept**: Single WaitSet monitoring multiple conditions
+
+**Task**: Create subscriber that waits for:
+- Data on topic A
+- Data on topic B  
+- Status change condition
+- Guard condition (for shutdown)
+
+**Why Harder**: Complex async coordination
+
+---
+
+## Task Balance Matrix
+
+Ensuring equal coverage of publishers and subscribers:
+
+| Level | Publisher Tasks | Subscriber Tasks | Both/Other |
+|-------|-----------------|------------------|------------|
+| L1 | L1-PY-01 ✅ | L1-PY-02 ✅ | - |
+| L2 | L2-PY-01 | L2-PY-02 | LQ-01 ✅ |
+| L3 | L3-PY-01 | L3-PY-02 | L3-PY-03 ✅ |
+| LX | LX-CPP-01 ✅ | LX-CPP-02 | - |
+| LN | LN-CPP-01 ✅ | LN-CPP-02 | - |
+| LD | LD-03 (pub) | LD-01, LD-04, LD-06 | LD-02, LD-05 |
+
+### Subscriber-Specific Challenges
+
+Subscribers are often HARDER because:
+
+1. **Async patterns required**: WaitSet, Listener, ReadCondition
+2. **State management**: Track what's been read vs unread
+3. **Instance lifecycle**: Handle dispose, unregister
+4. **Content filtering**: SQL expression syntax
+5. **Multi-topic correlation**: Join data from multiple topics
+6. **Error handling**: on_subscription_matched, on_sample_lost
+
+### Publisher-Specific Challenges
+
+1. **Flow control**: Don't overwhelm slow subscribers
+2. **Instance management**: register/dispose/unregister
+3. **Liveliness assertion**: Manual liveliness patterns
+4. **Coherent updates**: Atomic multi-sample writes
+
+---
+
+## Implementation Priority (Updated)
+
+### Phase 1: Core Balance ✅
+- [x] L1-PY-01: Publisher
+- [x] L1-PY-02: Subscriber
+
+### Phase 2: QoS Understanding
+- [x] LQ-01: Late Joiner
+- [ ] LQ-02: History Depth
+- [ ] LQ-03: QoS Mismatch
+
+### Phase 3: Advanced Subscriber
+- [ ] LD-01: Content Filtered Topic
+- [ ] LD-04: Instance Lifecycle
+- [ ] LD-06: Multi-Condition WaitSet
+
+### Phase 4: IDL/CodeGen
+- [ ] LD-03: RTI DDS Gen Workflow
+
+### Phase 5: Cross-Language
+- [x] LX-CPP-01: Python→C++ Publisher
+- [ ] LX-CPP-02: Python→C++ Subscriber
+- [x] LN-CPP-01: Native C++ Publisher
+- [ ] LN-CPP-02: Native C++ Subscriber
 
