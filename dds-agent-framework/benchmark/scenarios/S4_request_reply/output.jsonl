@@ -1,0 +1,6 @@
+{"operation": "ADD", "operand_a": 10.0, "operand_b": 5.0, "success": true, "result": 15.0, "error": "", "round_trip_ms": 643.9981460571289}
+{"operation": "SUB", "operand_a": 20.0, "operand_b": 8.0, "success": true, "result": 12.0, "error": "", "round_trip_ms": 539.5872592926025}
+{"operation": "MUL", "operand_a": 3.0, "operand_b": 7.0, "success": true, "result": 21.0, "error": "", "round_trip_ms": 434.95988845825195}
+{"operation": "DIV", "operand_a": 100.0, "operand_b": 4.0, "success": true, "result": 25.0, "error": "", "round_trip_ms": 332.69619941711426}
+{"operation": "DIV", "operand_a": 1.0, "operand_b": 0.0, "success": false, "result": 0.0, "error": "Division by zero", "round_trip_ms": 232.0408821105957}
+{"operation": "MOD", "operand_a": 10.0, "operand_b": 3.0, "success": false, "result": 0.0, "error": "Unknown operation: MOD", "round_trip_ms": 126.97601318359375}

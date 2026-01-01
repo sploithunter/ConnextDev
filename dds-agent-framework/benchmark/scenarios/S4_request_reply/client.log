@@ -1,0 +1,10 @@
+Waiting for service discovery...
+Matched! Request readers: 1, Reply writers: 1
+Sent: ADD(10.0, 5.0)
+Sent: SUB(20.0, 8.0)
+Sent: MUL(3.0, 7.0)
+Sent: DIV(100.0, 4.0)
+Sent: DIV(1.0, 0.0)
+Sent: MOD(10.0, 3.0)
+
+Completed 6/6 requests

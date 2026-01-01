@@ -1,0 +1,3 @@
+Content filter: severity >= 3
+
+Received 13 filtered samples (severity >= 3)

@@ -1,0 +1,7 @@
+Listening for vehicle instances...
+  State change: VEH_001 None -> ALIVE
+  State change: VEH_002 None -> ALIVE
+  State change: VEH_003 None -> ALIVE
+
+Received 22 valid samples
+Final instance states: {'VEH_001': 'ALIVE', 'VEH_002': 'ALIVE', 'VEH_003': 'ALIVE'}

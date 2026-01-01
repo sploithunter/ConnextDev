@@ -1,0 +1,13 @@
+{"sensor_id": "SENSOR_000", "sensor_type": "PRESSURE", "severity": 3, "value": 75.8455536827631, "message": "PRESSURE HIGH alert"}
+{"sensor_id": "SENSOR_001", "sensor_type": "TEMPERATURE", "severity": 4, "value": 57.58233655576338, "message": "TEMPERATURE CRITICAL alert"}
+{"sensor_id": "SENSOR_001", "sensor_type": "TEMPERATURE", "severity": 3, "value": 48.86555309671046, "message": "TEMPERATURE HIGH alert"}
+{"sensor_id": "SENSOR_003", "sensor_type": "TEMPERATURE", "severity": 4, "value": 24.704852769765274, "message": "TEMPERATURE CRITICAL alert"}
+{"sensor_id": "SENSOR_004", "sensor_type": "TEMPERATURE", "severity": 3, "value": 66.46160165225304, "message": "TEMPERATURE HIGH alert"}
+{"sensor_id": "SENSOR_006", "sensor_type": "HUMIDITY", "severity": 3, "value": 50.46528741812135, "message": "HUMIDITY HIGH alert"}
+{"sensor_id": "SENSOR_008", "sensor_type": "HUMIDITY", "severity": 4, "value": 13.087772875053716, "message": "HUMIDITY CRITICAL alert"}
+{"sensor_id": "SENSOR_009", "sensor_type": "PRESSURE", "severity": 3, "value": 32.566208686356426, "message": "PRESSURE HIGH alert"}
+{"sensor_id": "SENSOR_000", "sensor_type": "HUMIDITY", "severity": 4, "value": 75.31812823183199, "message": "HUMIDITY CRITICAL alert"}
+{"sensor_id": "SENSOR_002", "sensor_type": "PRESSURE", "severity": 4, "value": 63.0500157207255, "message": "PRESSURE CRITICAL alert"}
+{"sensor_id": "SENSOR_003", "sensor_type": "TEMPERATURE", "severity": 3, "value": 70.43061530478195, "message": "TEMPERATURE HIGH alert"}
+{"sensor_id": "SENSOR_006", "sensor_type": "HUMIDITY", "severity": 4, "value": 92.13196398297654, "message": "HUMIDITY CRITICAL alert"}
+{"sensor_id": "SENSOR_008", "sensor_type": "PRESSURE", "severity": 3, "value": 39.469199940807755, "message": "PRESSURE HIGH alert"}
