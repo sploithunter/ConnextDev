@@ -1,0 +1,3 @@
+# Generated reports - run generate_report.py to create
+*.png
+report.html
