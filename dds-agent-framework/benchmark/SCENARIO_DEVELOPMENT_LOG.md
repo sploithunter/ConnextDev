@@ -16,6 +16,7 @@ This helps calibrate difficulty levels.
 | S13 | Routing Service (Domain 0 → Domain 1, basic) | 2 | ~15min | L4 |
 | S14 | Type Extensibility (V1↔V2 compatibility) | 2 | ~10min | L3 |
 | S15 | **Coherence Mega-Project** (8-phase industrial system) | 1 | ~20min | L5 |
+| S16 | MQTT→DDS Protocol Bridge | 1 | ~15min | L4 |
 | | | | | |
 
 ---
@@ -227,6 +228,40 @@ Discover topics from raw network traffic.
 ## RTI Connext Infrastructure Services (Very Advanced)
 
 These are L5+ difficulty - challenging even for experienced developers.
+
+### S16: MQTT to DDS Protocol Bridge ✅ (1 iteration)
+
+**Goal**: Bridge between different pub/sub protocols.
+Common real-world IoT/Industrial pattern.
+
+**Architecture**:
+```
+MQTT Publisher → MQTT-DDS Bridge → DDS Subscriber
+(sensors/#)       (convert JSON)     (JSONL output)
+```
+
+**Components**:
+- mqtt_simulator.py - Simulates MQTT messages (no broker needed)
+- mqtt_dds_bridge.py - Subscribes to MQTT, publishes to DDS
+- dds_subscriber.py - Receives bridged data
+- dds_types.py - DDS type definitions
+
+**Topic Mapping**:
+| MQTT Topic | DDS Topic | Fields |
+|------------|-----------|--------|
+| sensors/temperature | SensorTemperature | device_id, value, unit |
+| sensors/humidity | SensorHumidity | device_id, value, unit |
+| sensors/status | DeviceStatus | device_id, online, battery |
+
+**Key Challenges**:
+- Multi-protocol knowledge (MQTT + DDS)
+- JSON parsing and type conversion
+- Async callback handling
+- Error recovery
+
+**Test Run**: 66 MQTT messages bridged → 50 DDS samples received
+
+---
 
 ### S15: Coherence Mega-Project ✅ (1 iteration for reference)
 
