@@ -66,6 +66,7 @@ class DualAgentConfig:
     max_tokens: int = 100000  # Token limit to prevent runaway costs
     timeout_seconds: int = 600
     verbose: bool = False
+    dev_mode: bool = False  # Include solution.md for harness testing
 
 
 @dataclass
@@ -431,6 +432,16 @@ class DualAgentBenchmark:
         prompt_file = task_dir / "prompt.md"
         task_prompt = prompt_file.read_text()
         
+        # DEV MODE: Append solution for harness testing
+        if config.dev_mode:
+            solution_file = task_dir / "solution.md"
+            if solution_file.exists():
+                task_prompt += "\n\n---\n\n# SOLUTION (DEV MODE)\n\n"
+                task_prompt += solution_file.read_text()
+                print("[DEV MODE] Solution appended to prompt")
+            else:
+                print("[DEV MODE] Warning: No solution.md found")
+        
         # Setup
         workspace = self._setup_workspace(task_dir)
         driver = DriverAgent(config.driver_model, config.verbose)
@@ -729,6 +740,8 @@ def main():
     parser.add_argument("--timeout", type=int, default=600,
                         help="Timeout in seconds (default: 600)")
     parser.add_argument("--verbose", "-v", action="store_true")
+    parser.add_argument("--dev-mode", action="store_true",
+                        help="Development mode: include solution.md in prompt (for testing harness)")
     parser.add_argument("--benchmark-dir", "-b", default=None)
     
     args = parser.parse_args()
@@ -753,6 +766,7 @@ def main():
         max_tokens=args.max_tokens,
         timeout_seconds=args.timeout,
         verbose=args.verbose,
+        dev_mode=args.dev_mode,
     )
     
     benchmark = DualAgentBenchmark(benchmark_dir, args.verbose)
