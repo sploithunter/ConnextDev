@@ -40,9 +40,24 @@ MODEL_PRICING = {
     "gemini-2.0-flash": (0.10, 0.40),
     "gemini-3-pro": (2.00, 8.00),  # Estimated
     
-    # xAI
-    "grok-2": (2.00, 10.00),  # Estimated
-    "grok-3": (5.00, 15.00),  # Estimated
+    # xAI (direct API with XAI_API_KEY)
+    "grok-2": (2.00, 10.00),
+    "grok-3": (3.00, 15.00),
+    "grok-3-mini": (0.30, 0.50),
+    "grok-4": (5.00, 15.00),
+    
+    # OpenRouter passthrough (fallback when no provider-specific key)
+    # Format: x-ai/model - prices include OpenRouter markup (~5-10%)
+    "x-ai/grok-3-beta": (3.00, 15.00),
+    "x-ai/grok-3-mini-beta": (0.30, 0.50),
+    "x-ai/grok-4": (5.00, 15.00),
+    "x-ai/grok-4-fast:free": (0.0, 0.0),  # Free tier
+    
+    # Other OpenRouter models
+    "meta-llama/llama-3.3-70b-instruct": (0.40, 0.40),
+    "deepseek/deepseek-chat": (0.14, 0.28),
+    "deepseek/deepseek-r1": (0.55, 2.19),
+    "qwen/qwen-2.5-72b-instruct": (0.35, 0.40),
 }
 
 

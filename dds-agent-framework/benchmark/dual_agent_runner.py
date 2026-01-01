@@ -167,7 +167,19 @@ class DriverAgent:
     
     def _setup_client(self):
         """Setup the appropriate API client."""
-        if "anthropic" in self.model or "claude" in self.model:
+        # Check for OpenRouter prefix first (supports many providers)
+        if self.model.startswith("openrouter/"):
+            if not HAS_OPENAI:
+                raise ImportError("openai package required for OpenRouter")
+            api_key = os.environ.get("OPENROUTER_API_KEY")
+            if not api_key:
+                raise ValueError("OPENROUTER_API_KEY environment variable required")
+            self.client = openai.OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key,
+            )
+            self.provider = "openrouter"
+        elif "anthropic" in self.model or "claude" in self.model:
             if not HAS_ANTHROPIC:
                 raise ImportError("anthropic package required for Claude models")
             self.client = anthropic.Anthropic()
@@ -224,6 +236,26 @@ class DriverAgent:
                     max_tokens=2048,
                     messages=messages,
                 )
+            reply = response.choices[0].message.content
+            # Track tokens and cost
+            if response.usage:
+                input_tokens = response.usage.prompt_tokens
+                output_tokens = response.usage.completion_tokens
+                tokens_used = input_tokens + output_tokens
+                self.cost_tracker.add_usage(input_tokens, output_tokens)
+                
+        elif self.provider == "openrouter":
+            # OpenRouter uses OpenAI-compatible API
+            # Model format: openrouter/provider/model (e.g., openrouter/xai/grok-2)
+            model_name = self.model.replace("openrouter/", "")
+            messages = [{"role": "system", "content": DRIVER_SYSTEM_PROMPT}]
+            messages.extend(self.conversation)
+            
+            response = self.client.chat.completions.create(
+                model=model_name,
+                max_tokens=2048,
+                messages=messages,
+            )
             reply = response.choices[0].message.content
             # Track tokens and cost
             if response.usage:
