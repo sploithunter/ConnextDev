@@ -38,6 +38,7 @@ class TaskConfig:
     expected_output: str
     prompt_file: str
     task_dir: Path
+    test_script: str = ""  # Optional test script for iterative mode
 
 
 @dataclass
@@ -88,11 +89,13 @@ class BenchmarkRunner:
         verbose: bool = False,
         run_rubric: bool = False,
         rubric_evaluator: str = "anthropic/claude-opus-4-5",
+        iterative: bool = True,  # Enable iterative mode by default
     ):
         self.benchmark_dir = benchmark_dir
         self.verbose = verbose
         self.run_rubric = run_rubric
         self.rubric_evaluator = rubric_evaluator
+        self.iterative = iterative
         self.config = self._load_config()
         
     def _load_config(self) -> dict:
@@ -116,6 +119,12 @@ class BenchmarkRunner:
         with open(task_yaml) as f:
             task_config = yaml.safe_load(f)
         
+        # Check for test script
+        test_script = ""
+        test_script_path = task_dir / "test_publisher.py"
+        if test_script_path.exists():
+            test_script = str(test_script_path)
+        
         return TaskConfig(
             task_id=task_config["task_id"],
             name=task_config["name"],
@@ -127,6 +136,7 @@ class BenchmarkRunner:
             expected_output=str(task_dir / task_config["verification"]["expected_output"]),
             prompt_file=str(task_dir / "prompt.md"),
             task_dir=task_dir,
+            test_script=test_script,
         )
     
     def _setup_workspace(self, task: TaskConfig) -> Path:
@@ -140,6 +150,14 @@ class BenchmarkRunner:
                 if f.is_file():
                     shutil.copy(f, workspace)
         
+        # Copy test script if iterative mode
+        if self.iterative and task.test_script:
+            shutil.copy(task.test_script, workspace / "test_publisher.py")
+            # Also copy reference directory for test script to use
+            ref_dir = task.task_dir / "reference"
+            if ref_dir.exists():
+                shutil.copytree(ref_dir, workspace / "reference")
+        
         if self.verbose:
             print(f"Workspace: {workspace}", file=sys.stderr)
         
@@ -151,22 +169,40 @@ class BenchmarkRunner:
         model: str,
         prompt: str,
         timeout: int,
+        test_cmd: str = None,
+        max_iterations: int = 10,
     ) -> tuple[bool, str, int]:
-        """Run Aider to generate code.
+        """Run Aider to generate code with iterative testing.
+        
+        If test_cmd is provided, Aider will run in iterative mode:
+        1. Generate code
+        2. Run test
+        3. If test fails, show error to model and let it fix
+        4. Repeat until success or max_iterations
         
         Returns: (success, output, iterations)
         """
         cmd = [
             "aider",
             "--model", model,
-            "--yes",  # Non-interactive
+            "--yes",  # Non-interactive (auto-accept edits)
             "--no-git",  # Don't use git in workspace
-            "--no-pretty",  # Clean output
-            "--message", prompt,
+            "--no-pretty",  # Clean output for parsing
         ]
         
+        # If we have a test command, use Aider's auto-test feature
+        if test_cmd:
+            cmd.extend([
+                "--test-cmd", test_cmd,
+                "--auto-test",  # Automatically run test after each edit
+            ])
+        
+        cmd.extend(["--message", prompt])
+        
         if self.verbose:
-            print(f"Running: {' '.join(cmd[:6])}...", file=sys.stderr)
+            print(f"Running: {' '.join(cmd[:8])}...", file=sys.stderr)
+            if test_cmd:
+                print(f"  Test command: {test_cmd}", file=sys.stderr)
         
         try:
             result = subprocess.run(
@@ -177,10 +213,17 @@ class BenchmarkRunner:
                 text=True,
             )
             
-            # Count iterations (rough estimate from output)
-            iterations = result.stdout.count("Applied edit")
+            output = result.stdout + result.stderr
             
-            return result.returncode == 0, result.stdout + result.stderr, iterations
+            # Count iterations from output
+            iterations = output.count("Applied edit")
+            
+            # Count test runs
+            test_runs = output.count("Running test")
+            if test_runs > 0 and self.verbose:
+                print(f"  Test runs: {test_runs}", file=sys.stderr)
+            
+            return result.returncode == 0, output, iterations
             
         except subprocess.TimeoutExpired:
             return False, "Aider timed out", 0
@@ -322,9 +365,17 @@ class BenchmarkRunner:
             prompt = f.read()
         
         # Run Aider
-        print(f"\nPhase 1: Code Generation (Aider + {model})")
+        mode_str = "(iterative)" if self.iterative else "(single-shot)"
+        print(f"\nPhase 1: Code Generation {mode_str} (Aider + {model})")
+        
+        # Set up test command for iterative mode
+        test_cmd = None
+        if self.iterative and (workspace / "test_publisher.py").exists():
+            test_cmd = f"python test_publisher.py"
+        
         aider_success, aider_output, iterations = self._run_aider(
-            workspace, model, prompt, task.timeout_seconds
+            workspace, model, prompt, task.timeout_seconds,
+            test_cmd=test_cmd,
         )
         
         if self.verbose:
@@ -524,6 +575,8 @@ def main():
     parser.add_argument("--rubric-evaluator", "-e", 
                         default="anthropic/claude-opus-4-5",
                         help="Model to use for rubric evaluation")
+    parser.add_argument("--no-iterative", action="store_true",
+                        help="Disable iterative mode (single-shot only)")
     
     args = parser.parse_args()
     
@@ -549,6 +602,7 @@ def main():
         verbose=args.verbose,
         run_rubric=args.rubric,
         rubric_evaluator=args.rubric_evaluator,
+        iterative=not args.no_iterative,
     )
     result = runner.run_benchmark(args.task, args.model)
     

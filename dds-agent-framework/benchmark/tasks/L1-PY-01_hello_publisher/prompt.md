@@ -2,7 +2,11 @@
 
 You are creating a DDS publisher using RTI Connext DDS Python API.
 
-**IMPORTANT**: Generate a COMPLETE, RUNNABLE publisher.py file. The file must be fully functional when run with `python publisher.py`.
+**IMPORTANT**: 
+- Generate a COMPLETE, RUNNABLE `publisher.py` file
+- After each edit, a test will run automatically to verify your code
+- If the test fails, you'll see the error and can fix it
+- Keep iterating until the test passes
 
 ## Requirements
 
