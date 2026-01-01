@@ -36,6 +36,8 @@ from typing import Optional
 
 import yaml
 
+from pricing import CostTracker, BenchmarkCostSummary, format_cost
+
 # Try to import LLM clients
 try:
     import anthropic
@@ -83,6 +85,9 @@ class DualAgentResult:
     driver_tokens: int = 0  # Tokens used by driver
     coder_tokens: int = 0   # Estimated tokens used by coder (from Aider)
     total_tokens: int = 0   # Combined token usage
+    driver_cost_usd: float = 0.0  # Cost in USD for driver
+    coder_cost_usd: float = 0.0   # Cost in USD for coder
+    total_cost_usd: float = 0.0   # Combined cost
     time_seconds: float = 0.0
     samples_matched: int = 0
     samples_expected: int = 0
@@ -157,6 +162,7 @@ class DriverAgent:
         self.verbose = verbose
         self.conversation = []
         self.total_tokens_used = 0  # Track cumulative token usage
+        self.cost_tracker = CostTracker(model)  # Track costs
         self._setup_client()
     
     def _setup_client(self):
@@ -194,8 +200,11 @@ class DriverAgent:
                 messages=self.conversation,
             )
             reply = response.content[0].text
-            # Track tokens
-            tokens_used = response.usage.input_tokens + response.usage.output_tokens
+            # Track tokens and cost
+            input_tokens = response.usage.input_tokens
+            output_tokens = response.usage.output_tokens
+            tokens_used = input_tokens + output_tokens
+            self.cost_tracker.add_usage(input_tokens, output_tokens)
             
         elif self.provider == "openai":
             model_name = self.model.replace("openai/", "")
@@ -216,17 +225,23 @@ class DriverAgent:
                     messages=messages,
                 )
             reply = response.choices[0].message.content
-            # Track tokens
+            # Track tokens and cost
             if response.usage:
-                tokens_used = response.usage.prompt_tokens + response.usage.completion_tokens
+                input_tokens = response.usage.prompt_tokens
+                output_tokens = response.usage.completion_tokens
+                tokens_used = input_tokens + output_tokens
+                self.cost_tracker.add_usage(input_tokens, output_tokens)
                 
         elif self.provider == "google":
             # Gemini uses a different format
             full_prompt = f"{DRIVER_SYSTEM_PROMPT}\n\n{prompt}"
             response = self.client.generate_content(full_prompt)
             reply = response.text
-            # Estimate tokens for Google (no direct API)
-            tokens_used = len(full_prompt.split()) + len(reply.split())  # Rough estimate
+            # Estimate tokens for Google (rough: 1.3 tokens per word)
+            input_tokens = int(len(full_prompt.split()) * 1.3)
+            output_tokens = int(len(reply.split()) * 1.3)
+            tokens_used = input_tokens + output_tokens
+            self.cost_tracker.add_usage(input_tokens, output_tokens)
         
         self.total_tokens_used += tokens_used
         self.conversation.append({"role": "assistant", "content": reply})
@@ -272,6 +287,7 @@ class CoderAgent:
         self.verbose = verbose
         self.edit_count = 0
         self.estimated_tokens = 0  # Rough estimate based on Aider output
+        self.cost_tracker = CostTracker(model)  # Track costs
     
     def execute_instructions(self, instructions: str, timeout: int = 120) -> tuple[str, str]:
         """Execute instructions using Aider.
@@ -315,10 +331,14 @@ class CoderAgent:
             # Estimate tokens (Aider may print "Tokens:" in output)
             token_match = re.search(r"Tokens:\s*([\d,]+)", aider_output)
             if token_match:
-                self.estimated_tokens += int(token_match.group(1).replace(",", ""))
+                tokens_this_call = int(token_match.group(1).replace(",", ""))
             else:
                 # Rough estimate: ~1.3 tokens per word
-                self.estimated_tokens += int(len(aider_output.split()) * 1.3)
+                tokens_this_call = int(len(aider_output.split()) * 1.3)
+            
+            self.estimated_tokens += tokens_this_call
+            # Estimate cost (assume 70% input, 30% output for Aider)
+            self.cost_tracker.add_total_tokens(tokens_this_call, input_ratio=0.7)
             
         except subprocess.TimeoutExpired:
             aider_output = "Aider timed out"
@@ -518,10 +538,14 @@ class DualAgentBenchmark:
         print("\n[Final Verification]")
         success, matched, expected = self._verify(workspace, task_dir)
         
-        # Calculate token usage
+        # Calculate token usage and costs
         driver_tokens = driver.total_tokens_used
         coder_tokens = coder.estimated_tokens  # Estimated from Aider output
         total_tokens = driver_tokens + coder_tokens
+        
+        driver_cost = driver.cost_tracker.total_cost_usd
+        coder_cost = coder.cost_tracker.total_cost_usd
+        total_cost = driver_cost + coder_cost
         
         result = DualAgentResult(
             task_id=config.task_id,
@@ -535,6 +559,9 @@ class DualAgentBenchmark:
             driver_tokens=driver_tokens,
             coder_tokens=coder_tokens,
             total_tokens=total_tokens,
+            driver_cost_usd=driver_cost,
+            coder_cost_usd=coder_cost,
+            total_cost_usd=total_cost,
             time_seconds=elapsed,
             samples_matched=matched,
             samples_expected=expected,
@@ -549,6 +576,7 @@ class DualAgentBenchmark:
         print(f"  Driver turns: {result.driver_turns}")
         print(f"  Coder edits: {coder.edit_count}")
         print(f"  Tokens: {total_tokens:,} (driver: {driver_tokens:,}, coder: ~{coder_tokens:,})")
+        print(f"  Cost: {format_cost(total_cost)} (driver: {format_cost(driver_cost)}, coder: {format_cost(coder_cost)})")
         print(f"  Samples: {matched}/{expected}")
         print(f"  Time: {elapsed:.1f}s")
         
@@ -716,6 +744,12 @@ class DualAgentBenchmark:
                 "total_iterations": result.total_iterations,
                 "driver_turns": result.driver_turns,
                 "coder_edits": result.coder_edits,
+                "driver_tokens": result.driver_tokens,
+                "coder_tokens": result.coder_tokens,
+                "total_tokens": result.total_tokens,
+                "driver_cost_usd": result.driver_cost_usd,
+                "coder_cost_usd": result.coder_cost_usd,
+                "total_cost_usd": result.total_cost_usd,
                 "time_seconds": result.time_seconds,
                 "samples_matched": result.samples_matched,
                 "samples_expected": result.samples_expected,
