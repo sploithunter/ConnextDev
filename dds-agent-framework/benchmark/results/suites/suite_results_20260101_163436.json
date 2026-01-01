@@ -1,0 +1,33 @@
+{
+  "start_time": "2026-01-01T16:34:04.212364",
+  "end_time": "2026-01-01T16:34:36.921014",
+  "total_time_seconds": 26.466529,
+  "dev_mode": true,
+  "total_tasks": 2,
+  "passed": 0,
+  "failed": 2,
+  "pass_rate": "0.0%",
+  "total_cost_usd": 0.0021,
+  "total_tokens": 0,
+  "results": [
+    {
+      "task": "L1-PY-02",
+      "model": "openai/gpt-4.1-nano / openai/gpt-4.1-nano",
+      "success": false,
+      "cost": 0.0011,
+      "time": 14.6
+    },
+    {
+      "task": "L1-PY-01",
+      "model": "openai/gpt-4.1-nano / openai/gpt-4.1-nano",
+      "success": false,
+      "cost": 0.001,
+      "time": 10.6
+    }
+  ],
+  "merge_info": {
+    "new_results": 1,
+    "preserved_results": 1,
+    "merged_at": "2026-01-01T16:34:36.921107"
+  }
+}

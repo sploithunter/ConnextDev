@@ -330,18 +330,102 @@ def print_summary(suite: BenchmarkSuite):
                 print(f"  - {r.task_id}: {r.reason}")
 
 
-def save_results(suite: BenchmarkSuite, output_dir: Path):
-    """Save results to JSON file."""
+def load_previous_results(filepath: Path) -> Optional[dict]:
+    """Load previous results for merging."""
+    if not filepath.exists():
+        return None
+    try:
+        with open(filepath) as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Warning: Could not load {filepath}: {e}")
+        return None
+
+
+def merge_results(new_data: dict, previous_data: dict) -> dict:
+    """Merge new results with previous results.
+    
+    New results for same task+model combinations replace old ones.
+    Old results for task+model combos not in new run are preserved.
+    """
+    # Create lookup for new results
+    new_results_lookup = {}
+    for r in new_data.get("results", []):
+        key = (r.get("task", ""), r.get("model", ""))
+        new_results_lookup[key] = r
+    
+    # Start with new results
+    merged_results = list(new_data.get("results", []))
+    
+    # Add old results that weren't re-tested
+    preserved_count = 0
+    for r in previous_data.get("results", []):
+        key = (r.get("task", ""), r.get("model", ""))
+        if key not in new_results_lookup:
+            merged_results.append(r)
+            preserved_count += 1
+    
+    # Recalculate totals
+    passed = sum(1 for r in merged_results if r.get("success"))
+    failed = sum(1 for r in merged_results if not r.get("success"))
+    total_cost = sum(r.get("cost", 0) for r in merged_results)
+    total_tokens = sum(r.get("tokens", 0) for r in merged_results)
+    
+    merged = {
+        "start_time": previous_data.get("start_time", new_data.get("start_time")),
+        "end_time": new_data.get("end_time"),
+        "total_time_seconds": (
+            previous_data.get("total_time_seconds", 0) + 
+            new_data.get("total_time_seconds", 0)
+        ),
+        "dev_mode": new_data.get("dev_mode", False),
+        "total_tasks": len(merged_results),
+        "passed": passed,
+        "failed": failed,
+        "pass_rate": f"{100 * passed / max(1, len(merged_results)):.1f}%",
+        "total_cost_usd": round(total_cost, 4),
+        "total_tokens": total_tokens,
+        "results": merged_results,
+        "merge_info": {
+            "new_results": len(new_data.get("results", [])),
+            "preserved_results": preserved_count,
+            "merged_at": datetime.now().isoformat(),
+        }
+    }
+    
+    print(f"\n📎 Merged results: {len(new_data.get('results', []))} new + "
+          f"{preserved_count} preserved = {len(merged_results)} total")
+    
+    return merged
+
+
+def save_results(suite: BenchmarkSuite, output_dir: Path, 
+                 merge_with: Optional[Path] = None) -> Path:
+    """Save results to JSON file, optionally merging with previous."""
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    new_data = suite.summary()
+    
+    # Merge if requested
+    if merge_with:
+        previous_data = load_previous_results(merge_with)
+        if previous_data:
+            new_data = merge_results(new_data, previous_data)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"suite_results_{timestamp}.json"
     filepath = output_dir / filename
     
     with open(filepath, "w") as f:
-        json.dump(suite.summary(), f, indent=2)
+        json.dump(new_data, f, indent=2)
+    
+    # Also save as "latest" for easy access
+    latest_path = output_dir / "suite_results_latest.json"
+    with open(latest_path, "w") as f:
+        json.dump(new_data, f, indent=2)
     
     print(f"\nResults saved: {filepath}")
+    print(f"Latest link: {latest_path}")
     return filepath
 
 
@@ -395,11 +479,28 @@ Examples:
     parser.add_argument("--output", "-o", type=str,
                         default="results/suites",
                         help="Output directory for results")
+    parser.add_argument("--merge", type=str,
+                        help="Merge with previous results file (or 'latest' for most recent)")
+    parser.add_argument("--models-file", type=str,
+                        help="Load model list from file (one per line)")
     
     args = parser.parse_args()
     
+    script_dir = Path(__file__).parent
+    
+    # Load models from file if specified
+    if args.models_file:
+        models_file = Path(args.models_file)
+        if models_file.exists():
+            with open(models_file) as f:
+                model_lines = [l.strip() for l in f if l.strip() and not l.startswith('#')]
+                models = [(m, m) for m in model_lines]
+            print(f"📋 Loaded {len(models)} models from {models_file}")
+        else:
+            print(f"❌ Models file not found: {models_file}")
+            return 1
     # Determine models to use
-    if args.quick:
+    elif args.quick:
         models = [QUICK_MODEL]
     elif args.high_end:
         models = HIGH_END_MODELS
@@ -409,6 +510,20 @@ Examples:
         models = [(args.driver, args.coder)]
     else:
         models = DEFAULT_MODELS
+    
+    # Determine merge file
+    merge_path = None
+    if args.merge:
+        if args.merge.lower() == "latest":
+            merge_path = script_dir / args.output / "suite_results_latest.json"
+        else:
+            merge_path = Path(args.merge)
+        
+        if merge_path.exists():
+            print(f"📎 Will merge with: {merge_path}")
+        else:
+            print(f"⚠ Merge file not found, will create new: {merge_path}")
+            merge_path = None
     
     # Run benchmark
     suite = run_benchmark_suite(
@@ -423,8 +538,7 @@ Examples:
     # Print and save results
     print_summary(suite)
     
-    script_dir = Path(__file__).parent
-    save_results(suite, script_dir / args.output)
+    save_results(suite, script_dir / args.output, merge_with=merge_path)
     
     # Return non-zero if any failures
     return 0 if suite.failed_tasks == 0 else 1

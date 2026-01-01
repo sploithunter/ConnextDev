@@ -1,0 +1,16 @@
+# Models to benchmark - one per line
+# Lines starting with # are comments
+
+# OpenAI models
+openai/gpt-4.1-nano
+openai/gpt-4.1-mini
+# openai/gpt-5.2  # Uncomment for high-end
+
+# Anthropic models  
+# anthropic/claude-sonnet-4-20250514
+# anthropic/claude-opus-4-20250514
+
+# OpenRouter models (fallback if no direct API key)
+# openrouter/x-ai/grok-3-mini-beta
+# openrouter/x-ai/grok-3-beta
+

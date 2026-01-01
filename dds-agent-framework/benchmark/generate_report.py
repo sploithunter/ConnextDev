@@ -189,8 +189,13 @@ def print_terminal_report(data: dict, model_results: list[ModelResult]):
     print("\n" + "═" * 80)
 
 
-def generate_png_charts(data: dict, model_results: list[ModelResult], output_dir: Path):
-    """Generate PNG chart files."""
+def generate_png_charts(data: dict, model_results: list[ModelResult], output_dir: Path,
+                        publication_quality: bool = False):
+    """Generate PNG chart files.
+    
+    Args:
+        publication_quality: If True, generates high-res charts suitable for papers
+    """
     if not HAS_MATPLOTLIB:
         print("⚠ matplotlib not installed, skipping PNG generation")
         print("  Install with: pip install matplotlib")
@@ -199,72 +204,156 @@ def generate_png_charts(data: dict, model_results: list[ModelResult], output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     generated = []
     
-    # Set style
-    plt.style.use('seaborn-v0_8-darkgrid')
+    # Publication-quality settings
+    if publication_quality:
+        plt.rcParams.update({
+            'font.size': 14,
+            'axes.titlesize': 16,
+            'axes.labelsize': 14,
+            'xtick.labelsize': 12,
+            'ytick.labelsize': 12,
+            'legend.fontsize': 12,
+            'figure.dpi': 300,
+            'savefig.dpi': 300,
+            'savefig.bbox': 'tight',
+            'font.family': 'sans-serif',
+        })
+        dpi = 300
+    else:
+        dpi = 150
     
-    # 1. Pass Rate Bar Chart
-    fig, ax = plt.subplots(figsize=(10, 6))
-    models = [r.model.split('/')[-1][:20] for r in model_results]
-    pass_rates = [r.pass_rate * 100 for r in model_results]
-    colors = ['#2ecc71' if r >= 80 else '#f39c12' if r >= 50 else '#e74c3c' for r in pass_rates]
+    # Use a clean style
+    plt.style.use('seaborn-v0_8-whitegrid')
     
-    bars = ax.barh(models, pass_rates, color=colors)
-    ax.set_xlabel('Pass Rate (%)')
-    ax.set_title('Model Performance - Pass Rate by Model')
-    ax.set_xlim(0, 100)
+    # Color palette for publication
+    COLORS = {
+        'success': '#27ae60',  # Green
+        'warning': '#f39c12',  # Orange  
+        'failure': '#e74c3c',  # Red
+        'primary': '#3498db',  # Blue
+        'secondary': '#9b59b6',  # Purple
+    }
     
-    # Add value labels
-    for bar, rate in zip(bars, pass_rates):
+    # 1. Pass Rate Bar Chart (Horizontal)
+    fig, ax = plt.subplots(figsize=(12, max(4, len(model_results) * 0.8)))
+    
+    # Sort by pass rate for better visualization
+    sorted_results = sorted(model_results, key=lambda r: r.pass_rate)
+    models = [r.model.split('/')[-1] for r in sorted_results]
+    pass_rates = [r.pass_rate * 100 for r in sorted_results]
+    
+    # Color by performance tier
+    colors = [
+        COLORS['success'] if r >= 80 else 
+        COLORS['warning'] if r >= 50 else 
+        COLORS['failure'] 
+        for r in pass_rates
+    ]
+    
+    bars = ax.barh(models, pass_rates, color=colors, edgecolor='white', linewidth=0.5)
+    ax.set_xlabel('Pass Rate (%)', fontweight='bold')
+    ax.set_title('Model Performance Comparison', fontweight='bold', pad=20)
+    ax.set_xlim(0, 105)
+    
+    # Add value labels with task counts
+    for i, (bar, rate, result) in enumerate(zip(bars, pass_rates, sorted_results)):
+        label = f'{rate:.0f}% ({result.tasks_passed}/{result.tasks_run})'
         ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2,
-                f'{rate:.0f}%', va='center')
+                label, va='center', fontsize=10)
+    
+    # Add gridlines
+    ax.xaxis.grid(True, linestyle='--', alpha=0.7)
+    ax.set_axisbelow(True)
     
     plt.tight_layout()
     filepath = output_dir / "pass_rate_chart.png"
-    plt.savefig(filepath, dpi=150)
+    plt.savefig(filepath, dpi=dpi, facecolor='white', edgecolor='none')
     plt.close()
     generated.append(filepath)
     
-    # 2. Cost vs Performance Scatter
+    # 2. Cost vs Performance Scatter (Publication Quality)
     if len(model_results) > 0:
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(figsize=(12, 8))
         
         costs = [r.total_cost for r in model_results]
         pass_rates = [r.pass_rate * 100 for r in model_results]
-        labels = [r.model.split('/')[-1][:15] for r in model_results]
+        labels = [r.model.split('/')[-1] for r in model_results]
+        sizes = [max(100, r.tasks_run * 50) for r in model_results]  # Size by tasks run
         
-        scatter = ax.scatter(costs, pass_rates, s=100, c=pass_rates, 
-                            cmap='RdYlGn', vmin=0, vmax=100, alpha=0.7)
+        scatter = ax.scatter(costs, pass_rates, s=sizes, c=pass_rates, 
+                            cmap='RdYlGn', vmin=0, vmax=100, alpha=0.8,
+                            edgecolors='white', linewidth=2)
         
+        # Smart label placement to avoid overlap
         for i, label in enumerate(labels):
+            # Offset based on position
+            x_off = 8 if costs[i] < max(costs) * 0.7 else -8
+            ha = 'left' if x_off > 0 else 'right'
             ax.annotate(label, (costs[i], pass_rates[i]), 
-                       textcoords="offset points", xytext=(5, 5), fontsize=8)
+                       textcoords="offset points", xytext=(x_off, 5), 
+                       fontsize=10, ha=ha,
+                       bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
         
-        ax.set_xlabel('Total Cost ($)')
-        ax.set_ylabel('Pass Rate (%)')
-        ax.set_title('Cost vs Performance')
-        ax.set_ylim(0, 105)
+        ax.set_xlabel('Total Cost ($)', fontweight='bold')
+        ax.set_ylabel('Pass Rate (%)', fontweight='bold')
+        ax.set_title('Cost vs Performance Analysis', fontweight='bold', pad=20)
+        ax.set_ylim(-5, 110)
+        ax.set_xlim(left=-max(costs)*0.05 if costs else 0)
         
-        plt.colorbar(scatter, label='Pass Rate %')
+        # Add quadrant labels
+        if costs and pass_rates:
+            mid_cost = (max(costs) + min(costs)) / 2
+            ax.axhline(y=50, color='gray', linestyle='--', alpha=0.3)
+            ax.axvline(x=mid_cost, color='gray', linestyle='--', alpha=0.3)
+            
+            # Quadrant annotations
+            ax.text(max(costs) * 0.95, 95, 'High Cost\nHigh Performance', 
+                   ha='right', va='top', fontsize=9, color='gray', style='italic')
+            ax.text(min(costs) + max(costs) * 0.05, 95, 'Low Cost\nHigh Performance', 
+                   ha='left', va='top', fontsize=9, color='green', fontweight='bold')
+        
+        cbar = plt.colorbar(scatter, label='Pass Rate %', shrink=0.8)
+        cbar.ax.tick_params(labelsize=10)
+        
+        ax.grid(True, linestyle='--', alpha=0.3)
         plt.tight_layout()
         filepath = output_dir / "cost_vs_performance.png"
-        plt.savefig(filepath, dpi=150)
+        plt.savefig(filepath, dpi=dpi, facecolor='white', edgecolor='none')
         plt.close()
         generated.append(filepath)
     
-    # 3. Cost Breakdown Pie Chart
-    if len(model_results) > 1:
-        fig, ax = plt.subplots(figsize=(8, 8))
+    # 3. Cost Breakdown Pie Chart (only if multiple models with costs)
+    models_with_cost = [r for r in model_results if r.total_cost > 0]
+    if len(models_with_cost) > 1:
+        fig, ax = plt.subplots(figsize=(10, 8))
         
-        costs = [r.total_cost for r in model_results]
-        labels = [f"{r.model.split('/')[-1][:15]}\n${r.total_cost:.3f}" 
-                  for r in model_results]
+        costs = [r.total_cost for r in models_with_cost]
+        labels = [r.model.split('/')[-1] for r in models_with_cost]
         
-        ax.pie(costs, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax.set_title('Cost Distribution by Model')
+        # Color by model family
+        colors = plt.cm.Set3(range(len(costs)))
+        
+        wedges, texts, autotexts = ax.pie(
+            costs, labels=labels, autopct='$%.3f', startangle=90,
+            colors=colors, pctdistance=0.75,
+            wedgeprops=dict(width=0.6, edgecolor='white', linewidth=2)
+        )
+        
+        # Style the percentage text
+        for autotext in autotexts:
+            autotext.set_fontsize(10)
+            autotext.set_fontweight('bold')
+        
+        ax.set_title('Cost Distribution by Model', fontweight='bold', pad=20)
+        
+        # Add total cost in center
+        total = sum(costs)
+        ax.text(0, 0, f'Total\n${total:.3f}', ha='center', va='center', 
+                fontsize=14, fontweight='bold')
         
         plt.tight_layout()
         filepath = output_dir / "cost_breakdown.png"
-        plt.savefig(filepath, dpi=150)
+        plt.savefig(filepath, dpi=dpi, facecolor='white', edgecolor='none')
         plt.close()
         generated.append(filepath)
     
@@ -506,13 +595,25 @@ def generate_html_report(data: dict, model_results: list[ModelResult],
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate benchmark reports")
+    parser = argparse.ArgumentParser(
+        description="Generate benchmark reports and visualizations",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python generate_report.py                    # Terminal report only
+  python generate_report.py --all              # Everything
+  python generate_report.py --publication      # High-res for papers
+  python generate_report.py -i results.json    # From specific file
+        """
+    )
     parser.add_argument("--input", "-i", type=str,
                         help="Input results JSON file (default: latest)")
     parser.add_argument("--html", action="store_true",
                         help="Generate HTML report")
     parser.add_argument("--png", action="store_true",
                         help="Generate PNG charts")
+    parser.add_argument("--publication", "-p", action="store_true",
+                        help="Generate publication-quality charts (300 DPI)")
     parser.add_argument("--output", "-o", type=str, default="results/reports",
                         help="Output directory")
     parser.add_argument("--all", "-a", action="store_true",
@@ -544,9 +645,13 @@ def main():
     
     # Generate charts if requested
     charts = []
-    if args.png or args.all:
-        print(f"\n📊 Generating PNG charts...")
-        charts = generate_png_charts(data, model_results, output_dir)
+    if args.png or args.all or args.publication:
+        quality = "publication" if args.publication else "standard"
+        print(f"\n📊 Generating PNG charts ({quality} quality)...")
+        charts = generate_png_charts(
+            data, model_results, output_dir,
+            publication_quality=args.publication
+        )
         for chart in charts:
             print(f"   ✓ {chart}")
     
