@@ -11,6 +11,8 @@ This helps calibrate difficulty levels.
 | S4 | Request/Reply Pattern (correlation, bidirectional) | 4 | ~15min | L3-L4 |
 | S5 | Binary Protocol Bridge (4 msg types, full loop) | 1 | ~10min | L4 |
 | S6 | Discovery + Built-in Topics (participant/topic discovery) | 5 | ~20min | L4 |
+| S7 | Large Data Model (439 fields from JSON Schema) | 1 | ~15min | L4-L5 |
+| S8 | Data Transformer (sub+pub, aggregation, unit conv) | 1 | ~10min | L3 |
 | | | | | |
 
 ---
@@ -148,14 +150,88 @@ Use matched_subscription_data/matched_publication_data for full info.
 
 ---
 
+---
+
+## Scenario 7: Large Data Model ✅
+
+**Goal**: Build pub/sub from non-DDS format (JSON Schema) with ~440 fields.
+Tests context handling, type management, and attention to detail.
+
+**Result**: PASSED first iteration!
+**Files**: scenarios/S7_large_data_model/reference/
+**Key Features**:
+- JSON Schema with 439 fields (UAV telemetry)
+- Schema converter: JSON Schema → DynamicData types
+- Nested object flattening with underscore naming
+- Realistic aerospace data: GPS, IMU, attitude, engines, batteries
+- Full round-trip verification
+
+### Iteration Log
+- Iteration 1: Created schema generator (439 fields) ✅
+- Iteration 1: Created schema converter ✅
+- Iteration 1: Created publisher with realistic data generation ✅
+- Iteration 1: Created subscriber, received 5/5 samples with 439 fields each ✅
+
+**Test for models**: Can they handle very large type definitions and generate all fields correctly?
+
+---
+
+## Scenario 8: Data Transformer ✅
+
+**Goal**: Application that is BOTH subscriber AND publisher.
+Common pattern for gateways, aggregators, and data enrichers.
+
+**Result**: PASSED first iteration!
+**Files**: scenarios/S8_data_transformer/reference/
+**Key Features**:
+- Subscribes: SensorReadings (raw data)
+- Publishes: ProcessedMetrics (aggregated data)
+- Time-windowed aggregation (configurable window)
+- Statistics: min, max, mean, stddev
+- Unit conversion (Celsius→Fahrenheit, Pa→kPa)
+- Alert level computation
+- Quality tracking
+
+### Iteration Log
+- Iteration 1: Created transformer with aggregation logic ✅
+- Iteration 1: Created sensor generator ✅
+- Iteration 1: Created metrics consumer ✅
+- Test: 40 readings → 15 aggregated metrics → 10 consumed ✅
+
+**Test for models**: Can they build a single app that is both subscriber and publisher with business logic in between?
+
+---
+
+## Planned Scenarios
+
+### S9: DDS-RPC (RTI Request-Reply)
+Use RTI's built-in RPC pattern instead of manual request/reply.
+
+### S10: C++ Interoperability
+Python publisher → C++ subscriber (or vice versa).
+
+### S11: Security (DDS Secure)
+Configure authentication and encryption.
+
+### S12: Network Discovery (Wireshark/RTPS)
+Discover topics from raw network traffic.
+
+---
+
 ## Summary
 
 | Level | Description | Iterations Range |
 |-------|-------------|-----------------|
 | L1 | Basic Hello World | 1-2 |
 | L2 | Single feature (CFT, multi-topic) | 1 |
-| L3 | Multi-feature (lifecycle, request/reply) | 2-4 |
-| L4 | Complex (bridge, discovery) | 1-5 |
+| L3 | Multi-feature (lifecycle, transformer) | 1-2 |
+| L4 | Complex (bridge, discovery, large model) | 1-5 |
 | L5 | Extreme (network sniffing, C++ interop) | 5+ (estimated) |
+
+### Key Observations
+1. API familiarity matters: S2 and S4 took more iterations due to API differences
+2. Complex patterns (S5, S7, S8) were surprisingly quick when patterns are known
+3. Discovery APIs (S6) required most iteration due to Python API limitations
+4. Large data models (S7) are tractable with systematic approach
 
 

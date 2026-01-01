@@ -1,0 +1,5 @@
+{"message_id": 1, "vehicle_id": "UAV_001", "timestamp_utc_ms": 1767306360281, "gps_lat": 37.775000000000006, "gps_lon": -122.41929999999999, "fields_received": 439}
+{"message_id": 2, "vehicle_id": "UAV_001", "timestamp_utc_ms": 1767306360784, "gps_lat": 37.7751, "gps_lon": -122.41919999999999, "fields_received": 439}
+{"message_id": 3, "vehicle_id": "UAV_001", "timestamp_utc_ms": 1767306361297, "gps_lat": 37.775200000000005, "gps_lon": -122.4191, "fields_received": 439}
+{"message_id": 4, "vehicle_id": "UAV_001", "timestamp_utc_ms": 1767306361805, "gps_lat": 37.7753, "gps_lon": -122.419, "fields_received": 439}
+{"message_id": 5, "vehicle_id": "UAV_001", "timestamp_utc_ms": 1767306362317, "gps_lat": 37.775400000000005, "gps_lon": -122.4189, "fields_received": 439}

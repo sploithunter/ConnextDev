@@ -1,0 +1,1597 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UAVTelemetry",
+  "description": "Complete UAV telemetry data model with ~500 fields",
+  "type": "object",
+  "properties": {
+    "message_id": {
+      "type": "integer"
+    },
+    "timestamp_utc_ms": {
+      "type": "integer"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "vehicle_type": {
+      "type": "string",
+      "enum": [
+        "FIXED_WING",
+        "ROTORCRAFT",
+        "VTOL",
+        "MULTIROTOR"
+      ]
+    },
+    "flight_id": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "operator_id": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "gps": {
+      "type": "object",
+      "properties": {
+        "gps_latitude_deg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "gps_longitude_deg": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "gps_altitude_msl_m": {
+          "type": "number",
+          "description": "Altitude above mean sea level"
+        },
+        "gps_altitude_agl_m": {
+          "type": "number",
+          "description": "Altitude above ground level"
+        },
+        "gps_ground_speed_mps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "gps_vertical_speed_mps": {
+          "type": "number"
+        },
+        "gps_track_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "gps_hdop": {
+          "type": "number",
+          "description": "Horizontal dilution of precision"
+        },
+        "gps_vdop": {
+          "type": "number",
+          "description": "Vertical dilution of precision"
+        },
+        "gps_pdop": {
+          "type": "number",
+          "description": "Position dilution of precision"
+        },
+        "gps_satellites_visible": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gps_satellites_used": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gps_fix_type": {
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "description": "0=None,1=2D,2=3D,3=DGPS,4=RTK,5=Float"
+        },
+        "gps_utc_time_ms": {
+          "type": "integer"
+        },
+        "gps_accuracy_horizontal_m": {
+          "type": "number"
+        },
+        "gps_accuracy_vertical_m": {
+          "type": "number"
+        },
+        "gps_geoid_separation_m": {
+          "type": "number"
+        }
+      }
+    },
+    "imu": {
+      "type": "object",
+      "properties": {
+        "accel_1_x_mps2": {
+          "type": "number",
+          "description": "Accelerometer 1 X m/s\u00b2"
+        },
+        "accel_1_y_mps2": {
+          "type": "number",
+          "description": "Accelerometer 1 Y m/s\u00b2"
+        },
+        "accel_1_z_mps2": {
+          "type": "number",
+          "description": "Accelerometer 1 Z m/s\u00b2"
+        },
+        "accel_1_temperature_c": {
+          "type": "number"
+        },
+        "accel_1_status": {
+          "type": "integer"
+        },
+        "accel_2_x_mps2": {
+          "type": "number",
+          "description": "Accelerometer 2 X m/s\u00b2"
+        },
+        "accel_2_y_mps2": {
+          "type": "number",
+          "description": "Accelerometer 2 Y m/s\u00b2"
+        },
+        "accel_2_z_mps2": {
+          "type": "number",
+          "description": "Accelerometer 2 Z m/s\u00b2"
+        },
+        "accel_2_temperature_c": {
+          "type": "number"
+        },
+        "accel_2_status": {
+          "type": "integer"
+        },
+        "accel_3_x_mps2": {
+          "type": "number",
+          "description": "Accelerometer 3 X m/s\u00b2"
+        },
+        "accel_3_y_mps2": {
+          "type": "number",
+          "description": "Accelerometer 3 Y m/s\u00b2"
+        },
+        "accel_3_z_mps2": {
+          "type": "number",
+          "description": "Accelerometer 3 Z m/s\u00b2"
+        },
+        "accel_3_temperature_c": {
+          "type": "number"
+        },
+        "accel_3_status": {
+          "type": "integer"
+        },
+        "gyro_1_x_radps": {
+          "type": "number",
+          "description": "Gyroscope 1 X rad/s"
+        },
+        "gyro_1_y_radps": {
+          "type": "number",
+          "description": "Gyroscope 1 Y rad/s"
+        },
+        "gyro_1_z_radps": {
+          "type": "number",
+          "description": "Gyroscope 1 Z rad/s"
+        },
+        "gyro_1_temperature_c": {
+          "type": "number"
+        },
+        "gyro_1_status": {
+          "type": "integer"
+        },
+        "gyro_2_x_radps": {
+          "type": "number",
+          "description": "Gyroscope 2 X rad/s"
+        },
+        "gyro_2_y_radps": {
+          "type": "number",
+          "description": "Gyroscope 2 Y rad/s"
+        },
+        "gyro_2_z_radps": {
+          "type": "number",
+          "description": "Gyroscope 2 Z rad/s"
+        },
+        "gyro_2_temperature_c": {
+          "type": "number"
+        },
+        "gyro_2_status": {
+          "type": "integer"
+        },
+        "gyro_3_x_radps": {
+          "type": "number",
+          "description": "Gyroscope 3 X rad/s"
+        },
+        "gyro_3_y_radps": {
+          "type": "number",
+          "description": "Gyroscope 3 Y rad/s"
+        },
+        "gyro_3_z_radps": {
+          "type": "number",
+          "description": "Gyroscope 3 Z rad/s"
+        },
+        "gyro_3_temperature_c": {
+          "type": "number"
+        },
+        "gyro_3_status": {
+          "type": "integer"
+        },
+        "mag_1_x_gauss": {
+          "type": "number"
+        },
+        "mag_1_y_gauss": {
+          "type": "number"
+        },
+        "mag_1_z_gauss": {
+          "type": "number"
+        },
+        "mag_1_temperature_c": {
+          "type": "number"
+        },
+        "mag_1_calibration_status": {
+          "type": "integer"
+        },
+        "mag_2_x_gauss": {
+          "type": "number"
+        },
+        "mag_2_y_gauss": {
+          "type": "number"
+        },
+        "mag_2_z_gauss": {
+          "type": "number"
+        },
+        "mag_2_temperature_c": {
+          "type": "number"
+        },
+        "mag_2_calibration_status": {
+          "type": "integer"
+        }
+      }
+    },
+    "attitude": {
+      "type": "object",
+      "properties": {
+        "roll_rad": {
+          "type": "number"
+        },
+        "pitch_rad": {
+          "type": "number"
+        },
+        "yaw_rad": {
+          "type": "number"
+        },
+        "roll_rate_radps": {
+          "type": "number"
+        },
+        "pitch_rate_radps": {
+          "type": "number"
+        },
+        "yaw_rate_radps": {
+          "type": "number"
+        },
+        "roll_deg": {
+          "type": "number"
+        },
+        "pitch_deg": {
+          "type": "number"
+        },
+        "yaw_deg": {
+          "type": "number"
+        },
+        "heading_true_deg": {
+          "type": "number"
+        },
+        "heading_magnetic_deg": {
+          "type": "number"
+        },
+        "quaternion_w": {
+          "type": "number"
+        },
+        "quaternion_x": {
+          "type": "number"
+        },
+        "quaternion_y": {
+          "type": "number"
+        },
+        "quaternion_z": {
+          "type": "number"
+        },
+        "attitude_source": {
+          "type": "string",
+          "enum": [
+            "INS",
+            "AHRS",
+            "GPS",
+            "ESTIMATED"
+          ]
+        },
+        "attitude_valid": {
+          "type": "boolean"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "static_pressure_pa": {
+          "type": "number"
+        },
+        "dynamic_pressure_pa": {
+          "type": "number"
+        },
+        "total_pressure_pa": {
+          "type": "number"
+        },
+        "barometric_altitude_m": {
+          "type": "number"
+        },
+        "density_altitude_m": {
+          "type": "number"
+        },
+        "indicated_airspeed_mps": {
+          "type": "number"
+        },
+        "true_airspeed_mps": {
+          "type": "number"
+        },
+        "calibrated_airspeed_mps": {
+          "type": "number"
+        },
+        "mach_number": {
+          "type": "number"
+        },
+        "outside_air_temperature_c": {
+          "type": "number"
+        },
+        "total_air_temperature_c": {
+          "type": "number"
+        },
+        "humidity_pct": {
+          "type": "number"
+        },
+        "wind_speed_mps": {
+          "type": "number"
+        },
+        "wind_direction_deg": {
+          "type": "number"
+        },
+        "angle_of_attack_deg": {
+          "type": "number"
+        },
+        "sideslip_angle_deg": {
+          "type": "number"
+        },
+        "icing_detected": {
+          "type": "boolean"
+        },
+        "pitot_heat_status": {
+          "type": "integer"
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "properties": {
+        "nav_mode": {
+          "type": "string",
+          "enum": [
+            "MANUAL",
+            "STABILIZED",
+            "ALTITUDE_HOLD",
+            "POSITION_HOLD",
+            "MISSION",
+            "RTL",
+            "LOITER",
+            "LAND"
+          ]
+        },
+        "current_waypoint_index": {
+          "type": "integer"
+        },
+        "total_waypoints": {
+          "type": "integer"
+        },
+        "waypoint_latitude_deg": {
+          "type": "number"
+        },
+        "waypoint_longitude_deg": {
+          "type": "number"
+        },
+        "waypoint_altitude_m": {
+          "type": "number"
+        },
+        "distance_to_waypoint_m": {
+          "type": "number"
+        },
+        "bearing_to_waypoint_deg": {
+          "type": "number"
+        },
+        "cross_track_error_m": {
+          "type": "number"
+        },
+        "home_latitude_deg": {
+          "type": "number"
+        },
+        "home_longitude_deg": {
+          "type": "number"
+        },
+        "home_altitude_m": {
+          "type": "number"
+        },
+        "distance_to_home_m": {
+          "type": "number"
+        },
+        "bearing_to_home_deg": {
+          "type": "number"
+        },
+        "mission_elapsed_time_s": {
+          "type": "number"
+        },
+        "mission_remaining_time_s": {
+          "type": "number"
+        },
+        "estimated_endurance_s": {
+          "type": "number"
+        },
+        "geofence_status": {
+          "type": "string",
+          "enum": [
+            "INSIDE",
+            "WARNING",
+            "BREACH"
+          ]
+        },
+        "terrain_altitude_m": {
+          "type": "number"
+        },
+        "terrain_clearance_m": {
+          "type": "number"
+        },
+        "preview_wp_1_lat_deg": {
+          "type": "number"
+        },
+        "preview_wp_1_lon_deg": {
+          "type": "number"
+        },
+        "preview_wp_1_alt_m": {
+          "type": "number"
+        },
+        "preview_wp_1_type": {
+          "type": "string"
+        },
+        "preview_wp_2_lat_deg": {
+          "type": "number"
+        },
+        "preview_wp_2_lon_deg": {
+          "type": "number"
+        },
+        "preview_wp_2_alt_m": {
+          "type": "number"
+        },
+        "preview_wp_2_type": {
+          "type": "string"
+        },
+        "preview_wp_3_lat_deg": {
+          "type": "number"
+        },
+        "preview_wp_3_lon_deg": {
+          "type": "number"
+        },
+        "preview_wp_3_alt_m": {
+          "type": "number"
+        },
+        "preview_wp_3_type": {
+          "type": "string"
+        },
+        "preview_wp_4_lat_deg": {
+          "type": "number"
+        },
+        "preview_wp_4_lon_deg": {
+          "type": "number"
+        },
+        "preview_wp_4_alt_m": {
+          "type": "number"
+        },
+        "preview_wp_4_type": {
+          "type": "string"
+        },
+        "preview_wp_5_lat_deg": {
+          "type": "number"
+        },
+        "preview_wp_5_lon_deg": {
+          "type": "number"
+        },
+        "preview_wp_5_alt_m": {
+          "type": "number"
+        },
+        "preview_wp_5_type": {
+          "type": "string"
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "payload_weight_kg": {
+          "type": "number"
+        },
+        "payload_status": {
+          "type": "integer"
+        },
+        "gimbal_roll_deg": {
+          "type": "number"
+        },
+        "gimbal_pitch_deg": {
+          "type": "number"
+        },
+        "gimbal_yaw_deg": {
+          "type": "number"
+        },
+        "gimbal_roll_rate_dps": {
+          "type": "number"
+        },
+        "gimbal_pitch_rate_dps": {
+          "type": "number"
+        },
+        "gimbal_yaw_rate_dps": {
+          "type": "number"
+        },
+        "camera_mode": {
+          "type": "string",
+          "enum": [
+            "OFF",
+            "VIDEO",
+            "PHOTO",
+            "IR",
+            "EO_IR"
+          ]
+        },
+        "camera_zoom_level": {
+          "type": "number"
+        },
+        "camera_focus_distance_m": {
+          "type": "number"
+        },
+        "camera_recording": {
+          "type": "boolean"
+        },
+        "camera_storage_used_pct": {
+          "type": "number"
+        },
+        "target_latitude_deg": {
+          "type": "number"
+        },
+        "target_longitude_deg": {
+          "type": "number"
+        },
+        "target_altitude_m": {
+          "type": "number"
+        },
+        "target_distance_m": {
+          "type": "number"
+        },
+        "target_bearing_deg": {
+          "type": "number"
+        },
+        "laser_designator_active": {
+          "type": "boolean"
+        },
+        "laser_range_m": {
+          "type": "number"
+        },
+        "laser_code": {
+          "type": "integer"
+        }
+      }
+    },
+    "servos": {
+      "type": "object",
+      "properties": {
+        "aileron_left_position_deg": {
+          "type": "number"
+        },
+        "aileron_left_command_deg": {
+          "type": "number"
+        },
+        "aileron_left_current_a": {
+          "type": "number"
+        },
+        "aileron_left_temperature_c": {
+          "type": "number"
+        },
+        "aileron_left_status": {
+          "type": "integer"
+        },
+        "aileron_right_position_deg": {
+          "type": "number"
+        },
+        "aileron_right_command_deg": {
+          "type": "number"
+        },
+        "aileron_right_current_a": {
+          "type": "number"
+        },
+        "aileron_right_temperature_c": {
+          "type": "number"
+        },
+        "aileron_right_status": {
+          "type": "integer"
+        },
+        "elevator_left_position_deg": {
+          "type": "number"
+        },
+        "elevator_left_command_deg": {
+          "type": "number"
+        },
+        "elevator_left_current_a": {
+          "type": "number"
+        },
+        "elevator_left_temperature_c": {
+          "type": "number"
+        },
+        "elevator_left_status": {
+          "type": "integer"
+        },
+        "elevator_right_position_deg": {
+          "type": "number"
+        },
+        "elevator_right_command_deg": {
+          "type": "number"
+        },
+        "elevator_right_current_a": {
+          "type": "number"
+        },
+        "elevator_right_temperature_c": {
+          "type": "number"
+        },
+        "elevator_right_status": {
+          "type": "integer"
+        },
+        "rudder_position_deg": {
+          "type": "number"
+        },
+        "rudder_command_deg": {
+          "type": "number"
+        },
+        "rudder_current_a": {
+          "type": "number"
+        },
+        "rudder_temperature_c": {
+          "type": "number"
+        },
+        "rudder_status": {
+          "type": "integer"
+        },
+        "flap_left_position_deg": {
+          "type": "number"
+        },
+        "flap_left_command_deg": {
+          "type": "number"
+        },
+        "flap_left_current_a": {
+          "type": "number"
+        },
+        "flap_left_temperature_c": {
+          "type": "number"
+        },
+        "flap_left_status": {
+          "type": "integer"
+        },
+        "flap_right_position_deg": {
+          "type": "number"
+        },
+        "flap_right_command_deg": {
+          "type": "number"
+        },
+        "flap_right_current_a": {
+          "type": "number"
+        },
+        "flap_right_temperature_c": {
+          "type": "number"
+        },
+        "flap_right_status": {
+          "type": "integer"
+        },
+        "spoiler_left_position_deg": {
+          "type": "number"
+        },
+        "spoiler_left_command_deg": {
+          "type": "number"
+        },
+        "spoiler_left_current_a": {
+          "type": "number"
+        },
+        "spoiler_left_temperature_c": {
+          "type": "number"
+        },
+        "spoiler_left_status": {
+          "type": "integer"
+        },
+        "spoiler_right_position_deg": {
+          "type": "number"
+        },
+        "spoiler_right_command_deg": {
+          "type": "number"
+        },
+        "spoiler_right_current_a": {
+          "type": "number"
+        },
+        "spoiler_right_temperature_c": {
+          "type": "number"
+        },
+        "spoiler_right_status": {
+          "type": "integer"
+        },
+        "trim_aileron_position_deg": {
+          "type": "number"
+        },
+        "trim_aileron_command_deg": {
+          "type": "number"
+        },
+        "trim_aileron_current_a": {
+          "type": "number"
+        },
+        "trim_aileron_temperature_c": {
+          "type": "number"
+        },
+        "trim_aileron_status": {
+          "type": "integer"
+        },
+        "trim_elevator_position_deg": {
+          "type": "number"
+        },
+        "trim_elevator_command_deg": {
+          "type": "number"
+        },
+        "trim_elevator_current_a": {
+          "type": "number"
+        },
+        "trim_elevator_temperature_c": {
+          "type": "number"
+        },
+        "trim_elevator_status": {
+          "type": "integer"
+        },
+        "trim_rudder_position_deg": {
+          "type": "number"
+        },
+        "trim_rudder_command_deg": {
+          "type": "number"
+        },
+        "trim_rudder_current_a": {
+          "type": "number"
+        },
+        "trim_rudder_temperature_c": {
+          "type": "number"
+        },
+        "trim_rudder_status": {
+          "type": "integer"
+        }
+      }
+    },
+    "communications": {
+      "type": "object",
+      "properties": {
+        "satcom_connected": {
+          "type": "boolean"
+        },
+        "satcom_signal_strength_dbm": {
+          "type": "number"
+        },
+        "satcom_latency_ms": {
+          "type": "number"
+        },
+        "satcom_bandwidth_kbps": {
+          "type": "number"
+        },
+        "satcom_packet_loss_pct": {
+          "type": "number"
+        },
+        "satcom_bytes_sent": {
+          "type": "integer"
+        },
+        "satcom_bytes_received": {
+          "type": "integer"
+        },
+        "satcom_status": {
+          "type": "integer"
+        },
+        "radio_1_connected": {
+          "type": "boolean"
+        },
+        "radio_1_signal_strength_dbm": {
+          "type": "number"
+        },
+        "radio_1_latency_ms": {
+          "type": "number"
+        },
+        "radio_1_bandwidth_kbps": {
+          "type": "number"
+        },
+        "radio_1_packet_loss_pct": {
+          "type": "number"
+        },
+        "radio_1_bytes_sent": {
+          "type": "integer"
+        },
+        "radio_1_bytes_received": {
+          "type": "integer"
+        },
+        "radio_1_status": {
+          "type": "integer"
+        },
+        "radio_2_connected": {
+          "type": "boolean"
+        },
+        "radio_2_signal_strength_dbm": {
+          "type": "number"
+        },
+        "radio_2_latency_ms": {
+          "type": "number"
+        },
+        "radio_2_bandwidth_kbps": {
+          "type": "number"
+        },
+        "radio_2_packet_loss_pct": {
+          "type": "number"
+        },
+        "radio_2_bytes_sent": {
+          "type": "integer"
+        },
+        "radio_2_bytes_received": {
+          "type": "integer"
+        },
+        "radio_2_status": {
+          "type": "integer"
+        },
+        "lte_connected": {
+          "type": "boolean"
+        },
+        "lte_signal_strength_dbm": {
+          "type": "number"
+        },
+        "lte_latency_ms": {
+          "type": "number"
+        },
+        "lte_bandwidth_kbps": {
+          "type": "number"
+        },
+        "lte_packet_loss_pct": {
+          "type": "number"
+        },
+        "lte_bytes_sent": {
+          "type": "integer"
+        },
+        "lte_bytes_received": {
+          "type": "integer"
+        },
+        "lte_status": {
+          "type": "integer"
+        },
+        "wifi_connected": {
+          "type": "boolean"
+        },
+        "wifi_signal_strength_dbm": {
+          "type": "number"
+        },
+        "wifi_latency_ms": {
+          "type": "number"
+        },
+        "wifi_bandwidth_kbps": {
+          "type": "number"
+        },
+        "wifi_packet_loss_pct": {
+          "type": "number"
+        },
+        "wifi_bytes_sent": {
+          "type": "integer"
+        },
+        "wifi_bytes_received": {
+          "type": "integer"
+        },
+        "wifi_status": {
+          "type": "integer"
+        },
+        "active_link": {
+          "type": "string",
+          "enum": [
+            "satcom",
+            "radio_1",
+            "radio_2",
+            "lte",
+            "wifi"
+          ]
+        },
+        "encryption_enabled": {
+          "type": "boolean"
+        },
+        "encryption_algorithm": {
+          "type": "string"
+        }
+      }
+    },
+    "system_status": {
+      "type": "object",
+      "properties": {
+        "flight_computer_1_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "flight_computer_1_temperature_c": {
+          "type": "number"
+        },
+        "flight_computer_1_uptime_s": {
+          "type": "integer"
+        },
+        "flight_computer_1_error_count": {
+          "type": "integer"
+        },
+        "flight_computer_1_last_error_code": {
+          "type": "integer"
+        },
+        "flight_computer_2_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "flight_computer_2_temperature_c": {
+          "type": "number"
+        },
+        "flight_computer_2_uptime_s": {
+          "type": "integer"
+        },
+        "flight_computer_2_error_count": {
+          "type": "integer"
+        },
+        "flight_computer_2_last_error_code": {
+          "type": "integer"
+        },
+        "flight_computer_3_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "flight_computer_3_temperature_c": {
+          "type": "number"
+        },
+        "flight_computer_3_uptime_s": {
+          "type": "integer"
+        },
+        "flight_computer_3_error_count": {
+          "type": "integer"
+        },
+        "flight_computer_3_last_error_code": {
+          "type": "integer"
+        },
+        "imu_unit_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "imu_unit_temperature_c": {
+          "type": "number"
+        },
+        "imu_unit_uptime_s": {
+          "type": "integer"
+        },
+        "imu_unit_error_count": {
+          "type": "integer"
+        },
+        "imu_unit_last_error_code": {
+          "type": "integer"
+        },
+        "gps_unit_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "gps_unit_temperature_c": {
+          "type": "number"
+        },
+        "gps_unit_uptime_s": {
+          "type": "integer"
+        },
+        "gps_unit_error_count": {
+          "type": "integer"
+        },
+        "gps_unit_last_error_code": {
+          "type": "integer"
+        },
+        "radar_altimeter_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "radar_altimeter_temperature_c": {
+          "type": "number"
+        },
+        "radar_altimeter_uptime_s": {
+          "type": "integer"
+        },
+        "radar_altimeter_error_count": {
+          "type": "integer"
+        },
+        "radar_altimeter_last_error_code": {
+          "type": "integer"
+        },
+        "transponder_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "transponder_temperature_c": {
+          "type": "number"
+        },
+        "transponder_uptime_s": {
+          "type": "integer"
+        },
+        "transponder_error_count": {
+          "type": "integer"
+        },
+        "transponder_last_error_code": {
+          "type": "integer"
+        },
+        "ads_b_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "ads_b_temperature_c": {
+          "type": "number"
+        },
+        "ads_b_uptime_s": {
+          "type": "integer"
+        },
+        "ads_b_error_count": {
+          "type": "integer"
+        },
+        "ads_b_last_error_code": {
+          "type": "integer"
+        },
+        "tcas_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "tcas_temperature_c": {
+          "type": "number"
+        },
+        "tcas_uptime_s": {
+          "type": "integer"
+        },
+        "tcas_error_count": {
+          "type": "integer"
+        },
+        "tcas_last_error_code": {
+          "type": "integer"
+        },
+        "weather_radar_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "weather_radar_temperature_c": {
+          "type": "number"
+        },
+        "weather_radar_uptime_s": {
+          "type": "integer"
+        },
+        "weather_radar_error_count": {
+          "type": "integer"
+        },
+        "weather_radar_last_error_code": {
+          "type": "integer"
+        },
+        "terrain_avoidance_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "terrain_avoidance_temperature_c": {
+          "type": "number"
+        },
+        "terrain_avoidance_uptime_s": {
+          "type": "integer"
+        },
+        "terrain_avoidance_error_count": {
+          "type": "integer"
+        },
+        "terrain_avoidance_last_error_code": {
+          "type": "integer"
+        },
+        "autopilot_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "autopilot_temperature_c": {
+          "type": "number"
+        },
+        "autopilot_uptime_s": {
+          "type": "integer"
+        },
+        "autopilot_error_count": {
+          "type": "integer"
+        },
+        "autopilot_last_error_code": {
+          "type": "integer"
+        },
+        "mission_computer_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "mission_computer_temperature_c": {
+          "type": "number"
+        },
+        "mission_computer_uptime_s": {
+          "type": "integer"
+        },
+        "mission_computer_error_count": {
+          "type": "integer"
+        },
+        "mission_computer_last_error_code": {
+          "type": "integer"
+        },
+        "video_encoder_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "video_encoder_temperature_c": {
+          "type": "number"
+        },
+        "video_encoder_uptime_s": {
+          "type": "integer"
+        },
+        "video_encoder_error_count": {
+          "type": "integer"
+        },
+        "video_encoder_last_error_code": {
+          "type": "integer"
+        },
+        "data_recorder_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "data_recorder_temperature_c": {
+          "type": "number"
+        },
+        "data_recorder_uptime_s": {
+          "type": "integer"
+        },
+        "data_recorder_error_count": {
+          "type": "integer"
+        },
+        "data_recorder_last_error_code": {
+          "type": "integer"
+        },
+        "emergency_beacon_status": {
+          "type": "string",
+          "enum": [
+            "OK",
+            "WARNING",
+            "FAULT",
+            "OFFLINE"
+          ]
+        },
+        "emergency_beacon_temperature_c": {
+          "type": "number"
+        },
+        "emergency_beacon_uptime_s": {
+          "type": "integer"
+        },
+        "emergency_beacon_error_count": {
+          "type": "integer"
+        },
+        "emergency_beacon_last_error_code": {
+          "type": "integer"
+        },
+        "master_warning": {
+          "type": "boolean"
+        },
+        "master_caution": {
+          "type": "boolean"
+        },
+        "emergency_status": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "PAN",
+            "MAYDAY"
+          ]
+        }
+      }
+    },
+    "battery_1": {
+      "type": "object",
+      "properties": {
+        "battery_1_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_current_a": {
+          "type": "number"
+        },
+        "battery_1_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_state_of_charge_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "battery_1_state_of_health_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "battery_1_capacity_remaining_ah": {
+          "type": "number"
+        },
+        "battery_1_capacity_full_ah": {
+          "type": "number"
+        },
+        "battery_1_cycles": {
+          "type": "integer"
+        },
+        "battery_1_status": {
+          "type": "integer"
+        },
+        "battery_1_fault_code": {
+          "type": "integer"
+        },
+        "battery_1_cell_1_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_1_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_2_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_2_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_3_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_3_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_4_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_4_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_5_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_5_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_6_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_6_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_7_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_7_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_8_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_8_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_9_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_9_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_10_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_10_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_11_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_11_temperature_c": {
+          "type": "number"
+        },
+        "battery_1_cell_12_voltage_v": {
+          "type": "number"
+        },
+        "battery_1_cell_12_temperature_c": {
+          "type": "number"
+        }
+      }
+    },
+    "battery_2": {
+      "type": "object",
+      "properties": {
+        "battery_2_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_current_a": {
+          "type": "number"
+        },
+        "battery_2_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_state_of_charge_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "battery_2_state_of_health_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "battery_2_capacity_remaining_ah": {
+          "type": "number"
+        },
+        "battery_2_capacity_full_ah": {
+          "type": "number"
+        },
+        "battery_2_cycles": {
+          "type": "integer"
+        },
+        "battery_2_status": {
+          "type": "integer"
+        },
+        "battery_2_fault_code": {
+          "type": "integer"
+        },
+        "battery_2_cell_1_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_1_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_2_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_2_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_3_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_3_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_4_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_4_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_5_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_5_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_6_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_6_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_7_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_7_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_8_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_8_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_9_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_9_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_10_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_10_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_11_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_11_temperature_c": {
+          "type": "number"
+        },
+        "battery_2_cell_12_voltage_v": {
+          "type": "number"
+        },
+        "battery_2_cell_12_temperature_c": {
+          "type": "number"
+        }
+      }
+    },
+    "engine_1": {
+      "type": "object",
+      "properties": {
+        "engine_1_rpm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "engine_1_throttle_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "engine_1_manifold_pressure_kpa": {
+          "type": "number"
+        },
+        "engine_1_fuel_flow_lph": {
+          "type": "number",
+          "minimum": 0
+        },
+        "engine_1_oil_pressure_kpa": {
+          "type": "number"
+        },
+        "engine_1_oil_temperature_c": {
+          "type": "number"
+        },
+        "engine_1_cylinder_head_temp_c": {
+          "type": "number"
+        },
+        "engine_1_exhaust_gas_temp_c": {
+          "type": "number"
+        },
+        "engine_1_turbo_boost_kpa": {
+          "type": "number"
+        },
+        "engine_1_vibration_level": {
+          "type": "number"
+        },
+        "engine_1_status": {
+          "type": "integer"
+        },
+        "engine_1_hours_total": {
+          "type": "number"
+        },
+        "engine_1_hours_since_overhaul": {
+          "type": "number"
+        }
+      }
+    },
+    "engine_2": {
+      "type": "object",
+      "properties": {
+        "engine_2_rpm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "engine_2_throttle_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "engine_2_manifold_pressure_kpa": {
+          "type": "number"
+        },
+        "engine_2_fuel_flow_lph": {
+          "type": "number",
+          "minimum": 0
+        },
+        "engine_2_oil_pressure_kpa": {
+          "type": "number"
+        },
+        "engine_2_oil_temperature_c": {
+          "type": "number"
+        },
+        "engine_2_cylinder_head_temp_c": {
+          "type": "number"
+        },
+        "engine_2_exhaust_gas_temp_c": {
+          "type": "number"
+        },
+        "engine_2_turbo_boost_kpa": {
+          "type": "number"
+        },
+        "engine_2_vibration_level": {
+          "type": "number"
+        },
+        "engine_2_status": {
+          "type": "integer"
+        },
+        "engine_2_hours_total": {
+          "type": "number"
+        },
+        "engine_2_hours_since_overhaul": {
+          "type": "number"
+        }
+      }
+    }
+  },
+  "required": [
+    "message_id",
+    "timestamp_utc_ms",
+    "vehicle_id"
+  ]
+}

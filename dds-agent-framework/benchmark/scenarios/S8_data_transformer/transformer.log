@@ -1,0 +1,8 @@
+Transformer running...
+  Subscribing: SensorReadings
+  Publishing: ProcessedMetrics
+  Window: 2000ms
+
+Transformer complete:
+  Readings received: 40
+  Metrics published: 15
