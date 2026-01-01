@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Routing Service Configuration
+  
+  Routes "SensorData" topic from Domain 0 to Domain 1
+  with a simple transformation (adding a prefix to sensor_id).
+  
+  This is a BASIC configuration. Real-world configs are much more complex.
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="http://community.rti.com/schema/current/rti_routing_service.xsd">
+
+    <!-- Type definitions for the topics we're routing -->
+    <types>
+        <struct name="SensorData">
+            <member name="sensor_id" type="string" stringMaxLength="64"/>
+            <member name="value" type="float64"/>
+            <member name="timestamp" type="int64"/>
+            <member name="quality" type="int32"/>
+        </struct>
+        
+        <struct name="RoutedSensorData">
+            <member name="routed_sensor_id" type="string" stringMaxLength="128"/>
+            <member name="original_value" type="float64"/>
+            <member name="processed_value" type="float64"/>
+            <member name="source_timestamp" type="int64"/>
+            <member name="routing_timestamp" type="int64"/>
+            <member name="quality" type="int32"/>
+        </struct>
+    </types>
+
+    <!-- QoS Profiles -->
+    <qos_library name="RoutingQosLib">
+        <qos_profile name="ReliableProfile">
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+            </datareader_qos>
+            <datawriter_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+            </datawriter_qos>
+        </qos_profile>
+    </qos_library>
+
+    <!-- Routing Service Definition -->
+    <routing_service name="SensorDataRouter">
+        
+        <!-- Enable administration for monitoring -->
+        <administration>
+            <domain_id>99</domain_id>
+        </administration>
+        
+        <!-- Domain Route: Domain 0 → Domain 1 -->
+        <domain_route name="Domain0To1">
+            
+            <!-- Input from Domain 0 -->
+            <participant name="Domain0Participant">
+                <domain_id>0</domain_id>
+            </participant>
+            
+            <!-- Output to Domain 1 -->
+            <participant name="Domain1Participant">
+                <domain_id>1</domain_id>
+            </participant>
+            
+            <!-- Session for topic routing -->
+            <session name="SensorSession">
+                
+                <!-- Topic Route: SensorData → RoutedSensorData -->
+                <topic_route name="SensorDataRoute">
+                    
+                    <!-- Input configuration -->
+                    <input participant="Domain0Participant">
+                        <topic_name>SensorData</topic_name>
+                        <registered_type_name>SensorData</registered_type_name>
+                        <datareader_qos base_name="RoutingQosLib::ReliableProfile"/>
+                    </input>
+                    
+                    <!-- Output configuration -->
+                    <output participant="Domain1Participant">
+                        <topic_name>RoutedSensorData</topic_name>
+                        <registered_type_name>RoutedSensorData</registered_type_name>
+                        <datawriter_qos base_name="RoutingQosLib::ReliableProfile"/>
+                    </output>
+                    
+                </topic_route>
+                
+            </session>
+            
+        </domain_route>
+        
+    </routing_service>
+    
+</dds>
+

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SIMPLIFIED Routing Service Configuration
+  
+  Just routes SensorData from Domain 0 to Domain 1 WITHOUT transformation.
+  Same type in, same type out.
+-->
+<dds xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="http://community.rti.com/schema/current/rti_routing_service.xsd">
+
+    <!-- Type definitions -->
+    <types>
+        <struct name="SensorData">
+            <member name="sensor_id" type="string" stringMaxLength="64"/>
+            <member name="value" type="float64"/>
+            <member name="timestamp" type="int64"/>
+            <member name="quality" type="int32"/>
+        </struct>
+    </types>
+
+    <!-- QoS Profiles -->
+    <qos_library name="RoutingQosLib">
+        <qos_profile name="ReliableProfile">
+            <datareader_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+            </datareader_qos>
+            <datawriter_qos>
+                <reliability>
+                    <kind>RELIABLE_RELIABILITY_QOS</kind>
+                </reliability>
+                <durability>
+                    <kind>TRANSIENT_LOCAL_DURABILITY_QOS</kind>
+                </durability>
+                <history>
+                    <kind>KEEP_ALL_HISTORY_QOS</kind>
+                </history>
+            </datawriter_qos>
+        </qos_profile>
+    </qos_library>
+
+    <!-- Routing Service Definition -->
+    <routing_service name="SimpleSensorRouter">
+        
+        <!-- Domain Route: Domain 0 → Domain 1 -->
+        <domain_route name="Domain0To1">
+            
+            <!-- Input from Domain 0 -->
+            <participant name="Domain0Participant">
+                <domain_id>0</domain_id>
+            </participant>
+            
+            <!-- Output to Domain 1 -->
+            <participant name="Domain1Participant">
+                <domain_id>1</domain_id>
+            </participant>
+            
+            <!-- Session for topic routing -->
+            <session name="SensorSession">
+                
+                <!-- Auto topic route - routes all matching topics -->
+                <auto_topic_route name="AllSensorData">
+                    <input participant="Domain0Participant">
+                        <allow_topic_name_filter>SensorData</allow_topic_name_filter>
+                        <datareader_qos base_name="RoutingQosLib::ReliableProfile"/>
+                    </input>
+                    <output participant="Domain1Participant">
+                        <allow_topic_name_filter>SensorData</allow_topic_name_filter>
+                        <datawriter_qos base_name="RoutingQosLib::ReliableProfile"/>
+                    </output>
+                </auto_topic_route>
+                
+            </session>
+            
+        </domain_route>
+        
+    </routing_service>
+    
+</dds>
+

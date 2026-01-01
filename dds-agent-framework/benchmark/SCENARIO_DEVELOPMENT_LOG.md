@@ -13,6 +13,7 @@ This helps calibrate difficulty levels.
 | S6 | Discovery + Built-in Topics (participant/topic discovery) | 5 | ~20min | L4 |
 | S7 | Large Data Model (439 fields from JSON Schema) | 1 | ~15min | L4-L5 |
 | S8 | Data Transformer (sub+pub, aggregation, unit conv) | 1 | ~10min | L3 |
+| S13 | Routing Service (Domain 0 → Domain 1, basic) | 2 | ~15min | L4 |
 | | | | | |
 
 ---
@@ -210,11 +211,92 @@ Use RTI's built-in RPC pattern instead of manual request/reply.
 ### S10: C++ Interoperability
 Python publisher → C++ subscriber (or vice versa).
 
-### S11: Security (DDS Secure)
-Configure authentication and encryption.
+### S11: Security (DDS Secure) - L4-L5
+Configure authentication, encryption, access control.
+- Generate identity certificates
+- Configure governance and permissions files
+- Secure participant creation
 
-### S12: Network Discovery (Wireshark/RTPS)
+### S12: Network Discovery (Wireshark/RTPS) - L5
 Discover topics from raw network traffic.
+
+---
+
+## RTI Connext Infrastructure Services (Very Advanced)
+
+These are L5+ difficulty - challenging even for experienced developers.
+
+### S13: Routing Service ✅ (Basic - 2 iterations)
+
+**Difficulty**: L4 (basic) to L5+ (with transformations)
+
+**Result**: PASSED after 2 iterations (basic domain bridge)
+**Files**: scenarios/S13_routing_service/
+
+#### Iteration Log
+- Iteration 1: Created topic_route with type transformation → FAILED (0 samples routed)
+- Iteration 2: Simplified to auto_topic_route without transformation → PASSED (10/10)
+
+#### What Worked
+- `auto_topic_route` with same type in/out
+- QoS profiles in XML
+- Domain participant configuration
+
+#### What's Still Hard (L5+)
+- Type transformation (requires Lua scripting or custom adapter)
+- Content-based routing filters
+- Multi-output fan-out
+- Debugging (why isn't data flowing?)
+
+Test scenarios to add:
+1. ✅ **Domain Bridge**: Route topic from domain 0 → domain 1 (DONE)
+2. **Topic Transformation**: Route "SensorReading" → "ProcessedReading" with data transformation
+3. **Content-Based Routing**: Filter/route based on data content
+4. **Multi-Output**: Fan-out from one topic to multiple topics
+
+### S14: Recording Service - L4
+Record DDS data to file for later analysis.
+
+Test scenarios:
+1. **Basic Recording**: Record topic to XCDR file
+2. **Filtered Recording**: Record only matching samples
+3. **Timed Recording**: Start/stop based on time or triggers
+
+### S15: Replay Service - L4-L5
+Replay recorded DDS data.
+
+Test scenarios:
+1. **Basic Replay**: Replay recorded file at original speed
+2. **Time-Scaled Replay**: Replay at 2x, 0.5x speed
+3. **Looping Replay**: Continuous replay for testing
+4. **Selective Replay**: Replay specific time ranges
+
+### S16: Persistence Service - L4
+Durable storage for DDS data across restarts.
+
+Test scenarios:
+1. **Basic Persistence**: Configure persistent writer/reader
+2. **Recovery**: Restart application and recover historical data
+3. **Database Backend**: Configure SQL database storage
+
+### S17: Cloud Discovery Service - L4
+Centralized discovery for WAN deployments.
+
+### S18: Web Integration Service - L5
+REST/WebSocket to DDS bridge.
+
+---
+
+## Difficulty Legend for Infrastructure Services
+
+| Service | Config Type | Scripting | Debugging | Est. Iterations |
+|---------|-------------|-----------|-----------|-----------------|
+| Recording | XML | None | Medium | 3-5 |
+| Replay | XML | None | Medium | 3-5 |
+| Persistence | XML | None | Hard | 5-8 |
+| Routing | XML | Lua | Very Hard | 10+ |
+| Security | XML + Certs | None | Very Hard | 8-15 |
+| Web Integration | XML + Code | JavaScript | Hard | 5-10 |
 
 ---
 
