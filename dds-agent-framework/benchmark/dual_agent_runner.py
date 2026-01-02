@@ -197,7 +197,11 @@ class DriverAgent:
         elif "gemini" in self.model:
             if not HAS_GOOGLE:
                 raise ImportError("google.generativeai package required for Gemini")
-            genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+            # Check both GOOGLE_API_KEY and GEMINI_API_KEY
+            api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("GOOGLE_API_KEY or GEMINI_API_KEY environment variable required")
+            genai.configure(api_key=api_key)
             self.client = genai.GenerativeModel(self.model)
             self.provider = "google"
         else:
@@ -665,10 +669,13 @@ class DualAgentBenchmark:
         output_handle = None
         
         # For tasks with complex test scripts, run the test script as final verification
+        # Prefer test scripts for non-standard tasks (bridge, workflow, discovery, etc.)
         test_scripts = list(workspace.glob("test_*.py"))
-        if test_scripts and (not publisher.exists() or not subscriber.exists()):
+        # Use test script if: no standard pub/sub OR has specialized test scripts
+        specialized_tests = [s for s in test_scripts if any(x in s.name for x in ["bridge", "workflow", "discovery", "interop"])]
+        if specialized_tests or (test_scripts and (not publisher.exists() or not subscriber.exists())):
             # Find and run the test script - it does full verification
-            test_script = test_scripts[0]
+            test_script = specialized_tests[0] if specialized_tests else test_scripts[0]
             try:
                 result = subprocess.run(
                     [sys.executable, str(test_script)],

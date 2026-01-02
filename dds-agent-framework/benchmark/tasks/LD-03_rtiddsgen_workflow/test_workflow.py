@@ -94,8 +94,10 @@ def check_uses_generated_types():
         with open(fname) as f:
             code = f.read()
         
-        if "DynamicData" in code:
-            print(f"✗ {fname} uses DynamicData instead of generated types")
+        # Check for actual DynamicData API usage (not just comments)
+        # DynamicData usage: dds.DynamicData.Topic, dds.DynamicData.DataWriter, etc.
+        if "dds.DynamicData" in code or "DynamicData.Topic" in code or "DynamicData.DataWriter" in code:
+            print(f"✗ {fname} uses DynamicData API instead of generated types")
             return False
         
         if "from HelloWorld import HelloWorld" not in code:

@@ -83,7 +83,7 @@ def run_task_a_test():
     
     time.sleep(2)
     
-    # Create and run a simple publisher
+    # Create and run a simple publisher with matching QoS
     pub_code = '''
 import time, rti.connextdds as dds
 t = dds.StructType("HelloWorld")
@@ -91,7 +91,10 @@ t.add_member(dds.Member("message", dds.StringType(256)))
 t.add_member(dds.Member("count", dds.Int32Type()))
 p = dds.DomainParticipant(0)
 topic = dds.DynamicData.Topic(p, "HelloWorld", t)
-w = dds.DynamicData.DataWriter(dds.Publisher(p), topic)
+qos = dds.DataWriterQos()
+qos.reliability.kind = dds.ReliabilityKind.RELIABLE
+qos.durability.kind = dds.DurabilityKind.TRANSIENT_LOCAL
+w = dds.DynamicData.DataWriter(dds.Publisher(p), topic, qos)
 time.sleep(2)
 for i in range(5):
     s = dds.DynamicData(t)

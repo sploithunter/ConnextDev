@@ -95,22 +95,27 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CONNEXTDDS_DIR}/resource/cmake")
 find_package(RTIConnextDDS REQUIRED)
 
-# Generate type support from IDL
-connextdds_rtiddsgen(
-    INPUT ${CMAKE_CURRENT_SOURCE_DIR}/HelloWorld.idl
-    LANG C++11
-    OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-# Create executable
+# Build with pre-generated IDL files (run rtiddsgen before cmake)
 add_executable(publisher 
     publisher.cxx 
-    ${CMAKE_CURRENT_BINARY_DIR}/HelloWorld.cxx
-    ${CMAKE_CURRENT_BINARY_DIR}/HelloWorldPlugin.cxx
+    HelloWorld.cxx
+    HelloWorldPlugin.cxx
 )
 
-target_include_directories(publisher PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(publisher PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(publisher RTIConnextDDS::cpp2_api)
+```
+
+## Build Instructions
+
+```bash
+# Step 1: Generate C++ types from IDL
+$NDDSHOME/bin/rtiddsgen -language C++11 -d . HelloWorld.idl
+
+# Step 2: Build with cmake
+mkdir build && cd build
+cmake .. -DCONNEXTDDS_DIR=$NDDSHOME
+make
 ```
 
 ## Key Translation Notes

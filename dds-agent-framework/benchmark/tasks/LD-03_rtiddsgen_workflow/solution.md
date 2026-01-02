@@ -29,7 +29,7 @@ from HelloWorld import HelloWorld  # Generated type
 def main():
     participant = dds.DomainParticipant(0)
     
-    # Use generated type directly (not DynamicData)
+    # Use generated type directly
     topic = dds.Topic(participant, "HelloWorld", HelloWorld)
     
     publisher = dds.Publisher(participant)
