@@ -20,12 +20,19 @@ MODEL_PRICING = {
     "gpt-4.1": (2.00, 8.00),
     "gpt-4.1-mini": (0.40, 1.60),
     "gpt-4.1-nano": (0.10, 0.40),
-    "gpt-5": (5.00, 15.00),  # Estimated
-    "gpt-5.2": (5.00, 15.00),  # Estimated
-    "gpt-5.2-codex": (3.00, 12.00),  # Estimated
+    # GPT-5 Family (Jan 2026 pricing)
+    "gpt-5": (5.00, 15.00),
+    "gpt-5-mini": (1.00, 3.00),
+    "gpt-5-nano": (0.25, 0.75),
+    "gpt-5.1": (5.00, 15.00),
+    "gpt-5.2": (5.00, 15.00),
+    
+    # O-series Reasoning Models
     "o1": (15.00, 60.00),
     "o1-mini": (3.00, 12.00),
+    "o1-preview": (15.00, 60.00),
     "o1-pro": (150.00, 600.00),
+    "o3": (10.00, 40.00),  # Estimated
     "o3-mini": (1.10, 4.40),
     
     # Anthropic

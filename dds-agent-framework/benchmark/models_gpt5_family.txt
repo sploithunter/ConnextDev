@@ -1,0 +1,20 @@
+# GPT-5 Family Benchmark - Full Evaluation
+# Testing all GPT-5.x variants including reasoning models
+
+# GPT-5.0 Family
+openai/gpt-5
+openai/gpt-5-mini
+openai/gpt-5-nano
+
+# GPT-5.1 Family
+openai/gpt-5.1
+
+# GPT-5.2 Family (latest)
+openai/gpt-5.2
+
+# Reasoning Models (O-series)
+openai/o1
+openai/o1-mini
+openai/o3
+openai/o3-mini
+
