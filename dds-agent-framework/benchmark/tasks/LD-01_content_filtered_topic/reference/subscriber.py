@@ -51,10 +51,10 @@ def main():
     
     # Create ContentFilteredTopic with SQL filter expression
     # This filters at the DDS level - non-matching samples are not sent
+    # API: ContentFilteredTopic(topic, name, contentfilter)
     cft = dds.DynamicData.ContentFilteredTopic(
-        participant,
-        "FilteredSensors",  # Name for filtered topic
-        topic,               # Base topic
+        topic,               # Base topic first
+        "FilteredSensors",   # Name for filtered topic
         dds.Filter("id > 50 AND value > 75.0")  # SQL filter
     )
     

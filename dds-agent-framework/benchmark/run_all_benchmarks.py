@@ -136,8 +136,13 @@ AVAILABLE_TASKS = discover_available_tasks() or [
 TASK_ALIASES = {
     "L1-PY-01": "L1-PY-01_hello_publisher",
     "L1-PY-02": "L1-PY-02_hello_subscriber",
+    "L3-PY-03": "L3-PY-03_full_loop_adapter",
     "LD-01": "LD-01_content_filtered_topic",
+    "LD-03": "LD-03_rtiddsgen_workflow",
+    "LD-07": "LD-07_discovery_guid_mining",
+    "LN-CPP-01": "LN-CPP-01_native_cpp_publisher",
     "LQ-01": "LQ-01_late_joiner_durability",
+    "LX-CPP-01": "LX-CPP-01_python_to_cpp_publisher",
 }
 
 # Default model configurations

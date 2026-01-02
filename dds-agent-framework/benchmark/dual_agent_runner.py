@@ -123,7 +123,12 @@ DRIVER_INITIAL_PROMPT = """You are supervising a Coder who needs to complete thi
 {task_prompt}
 
 The Coder will write the code using Aider and run tests.
-Start by giving them clear instructions on how to approach this task.
+
+IMPORTANT: If a "SOLUTION (DEV MODE)" section is included above, tell the Coder to create
+the files EXACTLY as shown in that solution section. This is for testing the benchmark harness.
+Just say: "Create the files exactly as specified in the solution section above."
+
+Otherwise, give them clear instructions on how to approach this task.
 Emphasize:
 1. Start simple, test early
 2. Use the correct DDS API patterns
@@ -384,11 +389,20 @@ class CoderAgent:
     
     def _run_test(self) -> str:
         """Run the test script."""
-        # Find the appropriate test script
+        # Find the appropriate test script - look for any test_*.py
         test_script = None
-        for name in ["test_publisher.py", "test_subscriber.py", "test_durability.py"]:
+        
+        # First try specific names in priority order
+        for name in ["test_publisher.py", "test_subscriber.py", "test_durability.py", 
+                     "test_bridge.py", "test_workflow.py", "test_discovery.py"]:
             candidate = self.workspace / name
             if candidate.exists():
+                test_script = candidate
+                break
+        
+        # Fallback: find any test_*.py
+        if test_script is None:
+            for candidate in self.workspace.glob("test_*.py"):
                 test_script = candidate
                 break
         
@@ -449,6 +463,9 @@ class DualAgentBenchmark:
         ref_dir = task_dir / "reference"
         if ref_dir.exists():
             shutil.copytree(ref_dir, workspace / "reference")
+            # Also copy essential protocol/utility files to workspace root for test access
+            for proto_file in ref_dir.glob("protocol*.py"):
+                shutil.copy(proto_file, workspace)
         
         # Copy broken directory for debugging tasks (LQ-)
         broken_dir = task_dir / "broken"
@@ -484,24 +501,30 @@ class DualAgentBenchmark:
         prompt_file = task_dir / "prompt.md"
         task_prompt = prompt_file.read_text()
         
-        # DEV MODE: Append solution for harness testing
-        if config.dev_mode:
-            solution_file = task_dir / "solution.md"
-            if solution_file.exists():
-                task_prompt += "\n\n---\n\n# SOLUTION (DEV MODE)\n\n"
-                task_prompt += solution_file.read_text()
-                print("[DEV MODE] Solution appended to prompt")
-            else:
-                print("[DEV MODE] Warning: No solution.md found")
-        
         # Setup
         workspace = self._setup_workspace(task_dir)
         driver = DriverAgent(config.driver_model, config.verbose)
         coder = CoderAgent(config.coder_model, workspace, config.verbose)
         
+        # DEV MODE: Append solution for harness testing
+        solution_content = ""
+        if config.dev_mode:
+            solution_file = task_dir / "solution.md"
+            if solution_file.exists():
+                solution_content = solution_file.read_text()
+                task_prompt += "\n\n---\n\n# SOLUTION (DEV MODE)\n\n"
+                task_prompt += solution_content
+                print("[DEV MODE] Solution appended to prompt")
+            else:
+                print("[DEV MODE] Warning: No solution.md found")
+        
         # Get initial instructions from Driver
         print("\n[Driver] Providing initial instructions...")
         instructions = driver.get_initial_instructions(task_prompt)
+        
+        # DEV MODE: Append solution code to coder's first instruction
+        if config.dev_mode and solution_content:
+            instructions += f"\n\n---\n\nHere is the complete solution code to create:\n\n{solution_content}"
         conversation_log.append({
             "turn": 0,
             "role": "driver",
@@ -640,6 +663,30 @@ class DualAgentBenchmark:
         
         sub_proc = None
         output_handle = None
+        
+        # For tasks with complex test scripts, run the test script as final verification
+        test_scripts = list(workspace.glob("test_*.py"))
+        if test_scripts and (not publisher.exists() or not subscriber.exists()):
+            # Find and run the test script - it does full verification
+            test_script = test_scripts[0]
+            try:
+                result = subprocess.run(
+                    [sys.executable, str(test_script)],
+                    cwd=workspace,
+                    timeout=120,
+                    capture_output=True,
+                    text=True,
+                )
+                if "ALL TESTS PASSED" in result.stdout:
+                    return True, 10, 10
+                # Check for specific pass counts like "5/5" or "6/6"
+                import re
+                match = re.search(r"(\d+)/(\d+) tests passed", result.stdout)
+                if match and match.group(1) == match.group(2):
+                    return True, 10, 10
+                return False, 0, 10
+            except Exception as e:
+                return False, 0, 10
         
         try:
             # Determine task type

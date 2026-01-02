@@ -153,6 +153,9 @@ def main():
     print(f"\n{'=' * 50}")
     print(f"Results: {passed}/{len(tests)} tests passed")
     
+    if passed == len(tests):
+        print("ALL TESTS PASSED")
+    
     return 0 if passed == len(tests) else 1
 
 

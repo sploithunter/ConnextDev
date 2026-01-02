@@ -50,11 +50,11 @@ def main():
     topic = dds.DynamicData.Topic(participant, "SensorReadings", sensor_type)
     
     # Create ContentFilteredTopic with SQL filter
+    # API: ContentFilteredTopic(topic, name, filter)
     cft = dds.DynamicData.ContentFilteredTopic(
-        participant,
-        "FilteredSensors",
-        topic,
-        dds.Filter("id > 50 AND value > 75.0")
+        topic,               # Base topic first
+        "FilteredSensors",   # Name for filtered topic
+        dds.Filter("id > 50 AND value > 75.0")  # SQL filter
     )
     
     subscriber = dds.Subscriber(participant)
