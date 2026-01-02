@@ -1,0 +1,22 @@
+# Clean Model List for RTI Benchmark
+# ====================================
+# Corrected model names, no duplicates, no legacy models
+
+# OpenAI GPT-5 Family (2025 flagship)
+openai/gpt-5
+openai/gpt-5.1
+openai/gpt-5.2
+
+# Anthropic Claude (current versions)
+anthropic/claude-opus-4-5
+anthropic/claude-sonnet-4-20250514
+
+# OpenAI Reasoning (best O-series)
+openai/o3
+
+# Google Gemini
+gemini/gemini-2.0-flash
+
+# xAI Grok (via OpenRouter)
+openrouter/x-ai/grok-3-beta
+

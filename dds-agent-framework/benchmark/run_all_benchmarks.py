@@ -136,6 +136,7 @@ AVAILABLE_TASKS = discover_available_tasks() or [
 TASK_ALIASES = {
     "L1-PY-01": "L1-PY-01_hello_publisher",
     "L1-PY-02": "L1-PY-02_hello_subscriber",
+    "LD-01": "LD-01_content_filtered_topic",
     "LQ-01": "LQ-01_late_joiner_durability",
 }
 
