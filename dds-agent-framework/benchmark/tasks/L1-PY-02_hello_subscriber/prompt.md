@@ -1,139 +1,34 @@
-# Task: Create a DDS HelloWorld Subscriber
+# Help me write a DDS subscriber
 
-## Critical Development Principle
+I need to create a subscriber that receives "HelloWorld" messages and prints them.
 
-**TEST EARLY, TEST OFTEN** - After every change, run `python test_subscriber.py` to verify your code works. Do not write large amounts of code without testing. Small, incremental changes with immediate testing will lead to success.
+## What I need
 
-## Objective
+A `subscriber.py` file that:
+- Subscribes to the "HelloWorld" topic on domain 0
+- The topic has two fields: `message` (string) and `count` (integer)
+- Prints each received sample as JSON, one per line (JSONL format)
+- Accepts `--count N` to receive N samples and `--timeout T` for max wait time
+- Should NOT use busy-waiting/polling - use proper async DDS patterns
 
-Create `subscriber.py` that subscribes to the "HelloWorld" DDS topic and outputs received samples as JSONL to stdout.
+## Output format
 
-## CRITICAL: Use Asynchronous Callbacks
-
-**DO NOT use polling loops!** You MUST use either:
-1. **WaitSet pattern** (preferred) - Wait for data condition, then take()
-2. **Listener pattern** - on_data_available callback
-
-**BAD - Polling (DO NOT DO THIS):**
-```python
-# WRONG - This is polling!
-while True:
-    samples = reader.take()
-    time.sleep(0.1)
+Each sample should be printed as a single JSON line:
+```
+{"message": "Hello World 1", "count": 1}
+{"message": "Hello World 2", "count": 2}
 ```
 
-**GOOD - WaitSet pattern:**
-```python
-waitset = dds.WaitSet()
-read_condition = dds.ReadCondition(reader, dds.DataState.any_data)
-waitset.attach_condition(read_condition)
+## What I know
 
-while running:
-    active = waitset.wait(dds.Duration.from_seconds(1.0))
-    if read_condition in active:
-        for sample in reader.take():
-            if sample.info.valid:
-                process(sample.data)
-```
+- Using RTI Connext DDS Python API (`rti.connextdds`)
+- I've heard DDS has WaitSet and Listener patterns for async data reception
+- There's a `dds-spy-wrapper` tool in this project for testing - it can verify if data is on the wire
 
-## RTI Connext DDS Python API - Correct Usage
+## Development approach
 
-Use `rti.connextdds` with DynamicData:
+**Test early, test often!** Run `python test_subscriber.py` after each change.
 
-```python
-import rti.connextdds as dds
+## Create subscriber.py
 
-# Create type dynamically
-hello_type = dds.StructType("HelloWorld")
-hello_type.add_member(dds.Member("message", dds.StringType(256)))
-hello_type.add_member(dds.Member("count", dds.Int32Type()))
-
-# Create participant and topic
-participant = dds.DomainParticipant(0)
-topic = dds.DynamicData.Topic(participant, "HelloWorld", hello_type)
-
-# Create subscriber and reader
-subscriber = dds.Subscriber(participant)
-reader = dds.DynamicData.DataReader(subscriber, topic)
-
-# Access sample data
-for sample in reader.take():
-    if sample.info.valid:
-        message = sample.data["message"]
-        count = sample.data["count"]
-```
-
-## Output Format
-
-Output each received sample as JSONL (one JSON object per line) to stdout:
-
-```jsonl
-{"message": "Hello, World!", "count": 1}
-{"message": "Hello, World!", "count": 2}
-```
-
-## Requirements
-
-1. Subscribe to topic "HelloWorld" on domain 0
-2. Use asynchronous reception (WaitSet or listener)
-3. Output samples as JSONL to stdout
-4. Run until `--count` samples received or `--timeout` seconds
-5. Handle SIGTERM gracefully
-
-## Command Line Arguments
-
-```bash
-python subscriber.py --count 10 --timeout 30
-```
-
-- `--count`: Number of samples to receive (default: 10)
-- `--timeout`: Max seconds to wait (default: 30)
-
-## Tools to Help You Succeed
-
-### `dds-spy-wrapper` - Verify Publisher is Sending
-
-Before debugging your subscriber, verify the publisher is actually sending data:
-
-```bash
-# Terminal 1: Run the reference publisher
-python reference/publisher.py --count 10
-
-# Terminal 2: Verify data is on the wire
-dds-spy-wrapper --domain 0 --duration 15
-```
-
-If spy shows samples → Publisher works, issue is in your subscriber
-If spy shows nothing → Check domain ID, topic name
-
-### Debugging Tip
-
-If your subscriber isn't receiving:
-1. First verify with `dds-spy-wrapper` that data is on the wire
-2. Check QoS compatibility (both sides should match)
-3. Check type definition matches exactly
-4. Ensure you're using async pattern (WaitSet), not polling
-
-## Test Your Code
-
-After writing `subscriber.py`, run:
-
-```bash
-python test_subscriber.py
-```
-
-This will:
-1. Check syntax
-2. Verify imports work
-3. Check for async pattern (WaitSet/Listener)
-4. Start the reference publisher
-5. Run your subscriber
-6. Verify output matches expected JSONL
-
-## Remember
-
-- TEST EARLY, TEST OFTEN
-- Use WaitSet or listener - NO POLLING
-- Output to stdout as JSONL
-- Handle signals gracefully
-
+Please write the complete subscriber. I'll test it with the reference publisher.

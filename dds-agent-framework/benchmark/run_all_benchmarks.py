@@ -2,28 +2,34 @@
 """
 Comprehensive Benchmark Runner - Runs all tasks across multiple models.
 
+Supports:
+- Sequential execution (default)
+- Parallel execution with isolated workspaces (--parallel)
+- Docker container isolation (--container) - for CI/CD
+- Merging results from multiple runs (--merge)
+
 Usage:
     # Run all tasks with default models
     python run_all_benchmarks.py
     
-    # Run specific tasks
-    python run_all_benchmarks.py --tasks L1-PY-01 L1-PY-02
+    # Parallel execution (isolated temp dirs for each worker)
+    python run_all_benchmarks.py --parallel 4
     
-    # Run with specific models
-    python run_all_benchmarks.py --models openai/gpt-4.1-mini anthropic/claude-sonnet-4
+    # With containers (most isolated)
+    python run_all_benchmarks.py --container --parallel 4
     
-    # Dev mode (tests harness, not models)
-    python run_all_benchmarks.py --dev-mode
-    
-    # Quick smoke test
-    python run_all_benchmarks.py --quick
+    # Merge with previous results
+    python run_all_benchmarks.py --merge latest
 """
 
 import argparse
+import concurrent.futures
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -92,36 +98,74 @@ class BenchmarkSuite:
                 {
                     "task": r.task_id,
                     "model": f"{r.driver_model} / {r.coder_model}",
+                    "driver_model": r.driver_model,
+                    "coder_model": r.coder_model,
                     "success": r.success,
                     "cost": round(r.cost_usd, 4),
                     "time": round(r.time_seconds, 1),
+                    "tokens": r.tokens,
+                    "samples_matched": r.samples_matched,
+                    "samples_expected": r.samples_expected,
                 }
                 for r in self.results
             ],
         }
 
 
-# Available tasks (those with test scripts)
-AVAILABLE_TASKS = [
-    "L1-PY-01",  # Hello Publisher
-    "L1-PY-02",  # Hello Subscriber
-    "LQ-01",     # Late Joiner Durability
+# Dynamically discover tasks with solution.md (ready for testing)
+def discover_available_tasks() -> list[str]:
+    """Find all tasks that have solution.md files (ready for dev-mode testing)."""
+    script_dir = Path(__file__).parent
+    tasks_dir = script_dir / "tasks"
+    
+    available = []
+    for task_dir in sorted(tasks_dir.iterdir()):
+        if task_dir.is_dir() and (task_dir / "solution.md").exists():
+            available.append(task_dir.name)
+    
+    return available
+
+
+AVAILABLE_TASKS = discover_available_tasks() or [
+    "L1-PY-01_hello_publisher",
+    "L1-PY-02_hello_subscriber", 
+    "LQ-01_late_joiner_durability",
 ]
+
+# Shortened task IDs for convenience
+TASK_ALIASES = {
+    "L1-PY-01": "L1-PY-01_hello_publisher",
+    "L1-PY-02": "L1-PY-02_hello_subscriber",
+    "LQ-01": "LQ-01_late_joiner_durability",
+}
 
 # Default model configurations
 DEFAULT_MODELS = [
-    ("openai/gpt-4.1-mini", "openai/gpt-4.1-mini"),  # Fast, cheap
+    ("openai/gpt-4.1-mini", "openai/gpt-4.1-mini"),
 ]
 
-# Quick test model (for smoke tests)
+# Quick test model
 QUICK_MODEL = ("openai/gpt-4.1-nano", "openai/gpt-4.1-nano")
 
-# High-end models for serious evaluation
+# High-end models
 HIGH_END_MODELS = [
     ("openai/gpt-5.2", "openai/gpt-5.2"),
     ("anthropic/claude-opus-4-20250514", "anthropic/claude-opus-4-20250514"),
-    ("openrouter/x-ai/grok-3-beta", "openrouter/x-ai/grok-3-beta"),
 ]
+
+
+def create_isolated_workspace(task_id: str, worker_id: int) -> Path:
+    """Create an isolated workspace for parallel execution."""
+    workspace = Path(tempfile.mkdtemp(prefix=f"dds_bench_{worker_id}_"))
+    script_dir = Path(__file__).parent
+    
+    # Copy task files
+    task_dir = script_dir / "tasks" / task_id
+    if task_dir.exists():
+        dst = workspace / "task"
+        shutil.copytree(task_dir, dst)
+    
+    return workspace
 
 
 def run_single_task(
@@ -132,21 +176,51 @@ def run_single_task(
     max_iterations: int = 10,
     timeout: int = 300,
     verbose: bool = False,
+    workspace: Optional[Path] = None,
+    use_container: bool = False,
+    worker_id: int = 0,
 ) -> Optional[TaskResult]:
     """Run a single benchmark task."""
     
     script_dir = Path(__file__).parent
     runner_script = script_dir / "dual_agent_runner.py"
     
-    cmd = [
-        sys.executable,
-        str(runner_script),
-        "--task", task_id,
-        "--driver", driver_model,
-        "--coder", coder_model,
-        "--max-iterations", str(max_iterations),
-        "--timeout", str(timeout),
-    ]
+    # Resolve task alias
+    full_task_id = TASK_ALIASES.get(task_id, task_id)
+    
+    # Set unique domain ID for parallel execution to avoid DDS conflicts
+    env = os.environ.copy()
+    if worker_id > 0:
+        # Each worker gets a unique domain range
+        base_domain = 85 + (worker_id * 10)
+        env["DDS_BENCHMARK_DOMAIN_OFFSET"] = str(worker_id * 10)
+    
+    if use_container:
+        # Docker-based isolation
+        cmd = [
+            "docker", "run", "--rm",
+            "-v", f"{script_dir}:/benchmark",
+            "-e", f"OPENAI_API_KEY={os.environ.get('OPENAI_API_KEY', '')}",
+            "-e", f"ANTHROPIC_API_KEY={os.environ.get('ANTHROPIC_API_KEY', '')}",
+            "-e", f"OPENROUTER_API_KEY={os.environ.get('OPENROUTER_API_KEY', '')}",
+            "dds-benchmark:latest",
+            "python", "/benchmark/dual_agent_runner.py",
+            "--task", full_task_id,
+            "--driver", driver_model,
+            "--coder", coder_model,
+            "--max-iterations", str(max_iterations),
+            "--timeout", str(timeout),
+        ]
+    else:
+        cmd = [
+            sys.executable,
+            str(runner_script),
+            "--task", full_task_id,
+            "--driver", driver_model,
+            "--coder", coder_model,
+            "--max-iterations", str(max_iterations),
+            "--timeout", str(timeout),
+        ]
     
     if dev_mode:
         cmd.append("--dev-mode")
@@ -158,18 +232,18 @@ def run_single_task(
             cmd,
             capture_output=True,
             text=True,
-            timeout=timeout + 60,  # Extra buffer
-            cwd=str(script_dir),
+            timeout=timeout + 60,
+            cwd=str(workspace) if workspace else str(script_dir),
+            env=env,
         )
         
         # Parse output for results
         output = result.stdout + result.stderr
         
-        # Try to find the result JSON file
+        # Find the most recent result file
         results_dir = script_dir / "results" / "dual_agent"
         if results_dir.exists():
-            # Find most recent result for this task/model combo
-            pattern = f"{task_id}_{driver_model.replace('/', '_')}"
+            pattern = f"{full_task_id}_{driver_model.replace('/', '_')}"
             matching = sorted(
                 [f for f in results_dir.glob("*.json") if pattern in f.name],
                 key=lambda f: f.stat().st_mtime,
@@ -180,7 +254,7 @@ def run_single_task(
                 with open(matching[0]) as f:
                     data = json.load(f)
                     return TaskResult(
-                        task_id=data.get("task_id", task_id),
+                        task_id=data.get("task_id", full_task_id),
                         driver_model=data.get("driver_model", driver_model),
                         coder_model=data.get("coder_model", coder_model),
                         success=data.get("success", False),
@@ -196,7 +270,7 @@ def run_single_task(
         # Fallback: parse from output
         success = "PASSED" in output and "FAILED" not in output.split("PASSED")[-1]
         return TaskResult(
-            task_id=task_id,
+            task_id=full_task_id,
             driver_model=driver_model,
             coder_model=coder_model,
             success=success,
@@ -211,7 +285,7 @@ def run_single_task(
         
     except subprocess.TimeoutExpired:
         return TaskResult(
-            task_id=task_id,
+            task_id=full_task_id,
             driver_model=driver_model,
             coder_model=coder_model,
             success=False,
@@ -225,7 +299,7 @@ def run_single_task(
         )
     except Exception as e:
         return TaskResult(
-            task_id=task_id,
+            task_id=full_task_id,
             driver_model=driver_model,
             coder_model=coder_model,
             success=False,
@@ -239,6 +313,28 @@ def run_single_task(
         )
 
 
+def run_parallel_worker(args_tuple):
+    """Worker function for parallel execution."""
+    task_id, driver, coder, dev_mode, max_iter, timeout, verbose, container, worker_id = args_tuple
+    
+    print(f"  [Worker {worker_id}] Starting {task_id} with {driver}")
+    result = run_single_task(
+        task_id=task_id,
+        driver_model=driver,
+        coder_model=coder,
+        dev_mode=dev_mode,
+        max_iterations=max_iter,
+        timeout=timeout,
+        verbose=verbose,
+        use_container=container,
+        worker_id=worker_id,
+    )
+    
+    status = "✓" if result and result.success else "✗"
+    print(f"  [Worker {worker_id}] {status} Finished {task_id}")
+    return result
+
+
 def run_benchmark_suite(
     tasks: list[str],
     models: list[tuple[str, str]],
@@ -246,6 +342,9 @@ def run_benchmark_suite(
     max_iterations: int = 10,
     timeout: int = 300,
     verbose: bool = False,
+    parallel: int = 1,
+    use_container: bool = False,
+    existing_results: Optional[dict] = None,
 ) -> BenchmarkSuite:
     """Run complete benchmark suite."""
     
@@ -257,24 +356,73 @@ def run_benchmark_suite(
         dev_mode=dev_mode,
     )
     
-    total_runs = len(tasks) * len(models)
-    current = 0
+    # Build list of jobs to run
+    jobs = []
+    skipped = 0
+    
+    # Check which task/model combos already exist
+    existing_keys = set()
+    if existing_results:
+        for r in existing_results.get("results", []):
+            key = (
+                r.get("task", ""),
+                r.get("driver_model", ""),
+                r.get("coder_model", ""),
+            )
+            existing_keys.add(key)
+    
+    for driver, coder in models:
+        for task_id in tasks:
+            full_task_id = TASK_ALIASES.get(task_id, task_id)
+            key = (full_task_id, driver, coder)
+            
+            if key in existing_keys:
+                skipped += 1
+                continue
+            
+            jobs.append((task_id, driver, coder))
+    
+    total_runs = len(jobs)
     
     print("=" * 70)
-    print(f"DDS Agent Benchmark Suite")
-    print(f"Tasks: {len(tasks)} | Models: {len(models)} | Total runs: {total_runs}")
+    print("DDS Agent Benchmark Suite")
+    print(f"Tasks: {len(tasks)} | Models: {len(models)}")
+    print(f"New jobs: {total_runs} | Skipped (already done): {skipped}")
+    print(f"Parallel workers: {parallel} | Containers: {use_container}")
     print(f"Dev mode: {dev_mode}")
     print("=" * 70)
     
-    for driver, coder in models:
-        model_name = driver if driver == coder else f"{driver}/{coder}"
-        print(f"\n{'='*70}")
-        print(f"Model: {model_name}")
-        print("=" * 70)
+    if total_runs == 0:
+        print("\n✅ All task/model combinations already completed!")
+        end_time = datetime.now()
+        suite.end_time = end_time.isoformat()
+        suite.total_time_seconds = (end_time - start_time).total_seconds()
+        return suite
+    
+    if parallel > 1:
+        # Parallel execution
+        print(f"\n🚀 Running {total_runs} jobs with {parallel} workers...")
         
-        for task_id in tasks:
+        worker_args = [
+            (task, driver, coder, dev_mode, max_iterations, timeout, 
+             verbose, use_container, i % parallel)
+            for i, (task, driver, coder) in enumerate(jobs)
+        ]
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=parallel) as executor:
+            results = list(executor.map(run_parallel_worker, worker_args))
+            
+        for result in results:
+            if result:
+                suite.results.append(result)
+    else:
+        # Sequential execution
+        current = 0
+        for task_id, driver, coder in jobs:
             current += 1
-            print(f"\n[{current}/{total_runs}] Task: {task_id}")
+            model_name = driver if driver == coder else f"{driver}/{coder}"
+            
+            print(f"\n[{current}/{total_runs}] {task_id} | {model_name}")
             print("-" * 40)
             
             result = run_single_task(
@@ -285,6 +433,7 @@ def run_benchmark_suite(
                 max_iterations=max_iterations,
                 timeout=timeout,
                 verbose=verbose,
+                use_container=use_container,
             )
             
             if result:
@@ -294,8 +443,6 @@ def run_benchmark_suite(
                 print(f"  Cost: ${result.cost_usd:.4f} | "
                       f"Tokens: {result.tokens:,} | "
                       f"Time: {result.time_seconds:.1f}s")
-            else:
-                print("  ✗ ERROR: No result returned")
     
     end_time = datetime.now()
     suite.end_time = end_time.isoformat()
@@ -343,35 +490,30 @@ def load_previous_results(filepath: Path) -> Optional[dict]:
 
 
 def merge_results(new_data: dict, previous_data: dict) -> dict:
-    """Merge new results with previous results.
-    
-    New results for same task+model combinations replace old ones.
-    Old results for task+model combos not in new run are preserved.
-    """
-    # Create lookup for new results
-    new_results_lookup = {}
+    """Merge new results with previous results."""
+    # Create lookup for new results by full key
+    new_lookup = {}
     for r in new_data.get("results", []):
-        key = (r.get("task", ""), r.get("model", ""))
-        new_results_lookup[key] = r
+        key = (r.get("task", ""), r.get("driver_model", ""), r.get("coder_model", ""))
+        new_lookup[key] = r
     
     # Start with new results
-    merged_results = list(new_data.get("results", []))
+    merged = list(new_data.get("results", []))
     
-    # Add old results that weren't re-tested
-    preserved_count = 0
+    # Add previous results that weren't in new run
+    preserved = 0
     for r in previous_data.get("results", []):
-        key = (r.get("task", ""), r.get("model", ""))
-        if key not in new_results_lookup:
-            merged_results.append(r)
-            preserved_count += 1
+        key = (r.get("task", ""), r.get("driver_model", ""), r.get("coder_model", ""))
+        if key not in new_lookup:
+            merged.append(r)
+            preserved += 1
     
     # Recalculate totals
-    passed = sum(1 for r in merged_results if r.get("success"))
-    failed = sum(1 for r in merged_results if not r.get("success"))
-    total_cost = sum(r.get("cost", 0) for r in merged_results)
-    total_tokens = sum(r.get("tokens", 0) for r in merged_results)
+    passed = sum(1 for r in merged if r.get("success"))
+    total_cost = sum(r.get("cost", 0) for r in merged)
+    total_tokens = sum(r.get("tokens", 0) for r in merged)
     
-    merged = {
+    result = {
         "start_time": previous_data.get("start_time", new_data.get("start_time")),
         "end_time": new_data.get("end_time"),
         "total_time_seconds": (
@@ -379,38 +521,35 @@ def merge_results(new_data: dict, previous_data: dict) -> dict:
             new_data.get("total_time_seconds", 0)
         ),
         "dev_mode": new_data.get("dev_mode", False),
-        "total_tasks": len(merged_results),
+        "total_tasks": len(merged),
         "passed": passed,
-        "failed": failed,
-        "pass_rate": f"{100 * passed / max(1, len(merged_results)):.1f}%",
+        "failed": len(merged) - passed,
+        "pass_rate": f"{100 * passed / max(1, len(merged)):.1f}%",
         "total_cost_usd": round(total_cost, 4),
         "total_tokens": total_tokens,
-        "results": merged_results,
+        "results": merged,
         "merge_info": {
             "new_results": len(new_data.get("results", [])),
-            "preserved_results": preserved_count,
+            "preserved_results": preserved,
             "merged_at": datetime.now().isoformat(),
         }
     }
     
-    print(f"\n📎 Merged results: {len(new_data.get('results', []))} new + "
-          f"{preserved_count} preserved = {len(merged_results)} total")
-    
-    return merged
+    print(f"\n📎 Merged: {len(new_data.get('results',[]))} new + {preserved} preserved = {len(merged)} total")
+    return result
 
 
 def save_results(suite: BenchmarkSuite, output_dir: Path, 
                  merge_with: Optional[Path] = None) -> Path:
-    """Save results to JSON file, optionally merging with previous."""
+    """Save results to JSON file."""
     output_dir.mkdir(parents=True, exist_ok=True)
     
     new_data = suite.summary()
     
-    # Merge if requested
     if merge_with:
-        previous_data = load_previous_results(merge_with)
-        if previous_data:
-            new_data = merge_results(new_data, previous_data)
+        previous = load_previous_results(merge_with)
+        if previous:
+            new_data = merge_results(new_data, previous)
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"suite_results_{timestamp}.json"
@@ -419,13 +558,12 @@ def save_results(suite: BenchmarkSuite, output_dir: Path,
     with open(filepath, "w") as f:
         json.dump(new_data, f, indent=2)
     
-    # Also save as "latest" for easy access
-    latest_path = output_dir / "suite_results_latest.json"
-    with open(latest_path, "w") as f:
+    latest = output_dir / "suite_results_latest.json"
+    with open(latest, "w") as f:
         json.dump(new_data, f, indent=2)
     
     print(f"\nResults saved: {filepath}")
-    print(f"Latest link: {latest_path}")
+    print(f"Latest: {latest}")
     return filepath
 
 
@@ -433,85 +571,57 @@ def main():
     parser = argparse.ArgumentParser(
         description="Run DDS Agent Benchmark Suite",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Run all tasks with default model
-  python run_all_benchmarks.py
-  
-  # Quick smoke test (nano model, fast)
-  python run_all_benchmarks.py --quick
-  
-  # Dev mode (test harness, not models)
-  python run_all_benchmarks.py --dev-mode
-  
-  # Specific tasks
-  python run_all_benchmarks.py --tasks L1-PY-01 LQ-01
-  
-  # Custom models
-  python run_all_benchmarks.py --models openai/gpt-5.2 anthropic/claude-opus-4
-  
-  # High-end evaluation
-  python run_all_benchmarks.py --high-end
-        """
     )
     
     parser.add_argument("--tasks", "-t", nargs="+", 
-                        choices=AVAILABLE_TASKS,
-                        default=AVAILABLE_TASKS,
-                        help="Tasks to run")
+                        default=list(TASK_ALIASES.keys()),
+                        help="Tasks to run (e.g., L1-PY-01 LQ-01)")
     parser.add_argument("--models", "-m", nargs="+",
-                        help="Models to test (driver=coder)")
-    parser.add_argument("--driver", type=str,
-                        help="Driver model (if different from coder)")
-    parser.add_argument("--coder", type=str,
-                        help="Coder model (if different from driver)")
+                        help="Models to test")
+    parser.add_argument("--models-file", type=str,
+                        help="Load models from file")
     parser.add_argument("--dev-mode", action="store_true",
-                        help="Enable dev mode (tests harness)")
+                        help="Test harness with solution hints")
     parser.add_argument("--quick", action="store_true",
-                        help="Quick smoke test with nano model")
+                        help="Quick test with nano model")
     parser.add_argument("--high-end", action="store_true",
                         help="Test with high-end models")
-    parser.add_argument("--max-iterations", "-n", type=int, default=10,
-                        help="Max iterations per task")
-    parser.add_argument("--timeout", type=int, default=300,
-                        help="Timeout per task in seconds")
-    parser.add_argument("--verbose", "-v", action="store_true")
-    parser.add_argument("--output", "-o", type=str,
-                        default="results/suites",
-                        help="Output directory for results")
+    parser.add_argument("--max-iterations", "-n", type=int, default=10)
+    parser.add_argument("--timeout", type=int, default=300)
+    parser.add_argument("--parallel", "-p", type=int, default=1,
+                        help="Number of parallel workers (WARNING: DDS domain conflicts possible)")
+    parser.add_argument("--container", action="store_true",
+                        help="Use Docker containers for isolation")
     parser.add_argument("--merge", type=str,
-                        help="Merge with previous results file (or 'latest' for most recent)")
-    parser.add_argument("--models-file", type=str,
-                        help="Load model list from file (one per line)")
+                        help="Merge with previous results ('latest' or file path)")
+    parser.add_argument("--output", "-o", type=str, default="results/suites")
+    parser.add_argument("--verbose", "-v", action="store_true")
     
     args = parser.parse_args()
-    
     script_dir = Path(__file__).parent
     
-    # Load models from file if specified
+    # Load models
     if args.models_file:
-        models_file = Path(args.models_file)
-        if models_file.exists():
-            with open(models_file) as f:
-                model_lines = [l.strip() for l in f if l.strip() and not l.startswith('#')]
-                models = [(m, m) for m in model_lines]
-            print(f"📋 Loaded {len(models)} models from {models_file}")
+        mfile = Path(args.models_file)
+        if mfile.exists():
+            with open(mfile) as f:
+                lines = [l.strip() for l in f if l.strip() and not l.startswith('#')]
+                models = [(m, m) for m in lines]
+            print(f"📋 Loaded {len(models)} models from {mfile}")
         else:
-            print(f"❌ Models file not found: {models_file}")
+            print(f"❌ Models file not found: {mfile}")
             return 1
-    # Determine models to use
     elif args.quick:
         models = [QUICK_MODEL]
     elif args.high_end:
         models = HIGH_END_MODELS
     elif args.models:
         models = [(m, m) for m in args.models]
-    elif args.driver and args.coder:
-        models = [(args.driver, args.coder)]
     else:
         models = DEFAULT_MODELS
     
-    # Determine merge file
+    # Handle merge
+    existing_results = None
     merge_path = None
     if args.merge:
         if args.merge.lower() == "latest":
@@ -520,12 +630,12 @@ Examples:
             merge_path = Path(args.merge)
         
         if merge_path.exists():
-            print(f"📎 Will merge with: {merge_path}")
-        else:
-            print(f"⚠ Merge file not found, will create new: {merge_path}")
-            merge_path = None
+            existing_results = load_previous_results(merge_path)
+            if existing_results:
+                print(f"📎 Merging with: {merge_path}")
+                print(f"   Previous results: {len(existing_results.get('results', []))}")
     
-    # Run benchmark
+    # Run suite
     suite = run_benchmark_suite(
         tasks=args.tasks,
         models=models,
@@ -533,17 +643,16 @@ Examples:
         max_iterations=args.max_iterations,
         timeout=args.timeout,
         verbose=args.verbose,
+        parallel=args.parallel,
+        use_container=args.container,
+        existing_results=existing_results,
     )
     
-    # Print and save results
     print_summary(suite)
-    
     save_results(suite, script_dir / args.output, merge_with=merge_path)
     
-    # Return non-zero if any failures
     return 0 if suite.failed_tasks == 0 else 1
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
